@@ -16,7 +16,7 @@ cp .env.example .env
 ### 2. 创建虚拟环境
 
 ```bash
-cd /home/daojie/openerb/openerb
+cd ~/openerb
 
 # 创建虚拟环境
 python -m venv venv
@@ -31,7 +31,7 @@ venv\Scripts\activate  # Windows
 
 ```bash
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ### 4. 初始化系统

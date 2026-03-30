@@ -446,7 +446,7 @@ Unitree SDK2     - 宇树机器人控制 (待集成)
 
 ### 快速开始 (5 分钟)
 ```bash
-cd /home/daojie/openerb/openerb
+cd ~/openerb/openerb
 python -m venv venv
 source venv/bin/activate
 pip install -e .

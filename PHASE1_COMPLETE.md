@@ -4,7 +4,7 @@
 
 **项目名称**: OpenERB (Open Embodied Robot Brain)  
 **项目简称**: openerb  
-**项目目录**: `/home/daojie/openerb`  
+**项目目录**: `~/openerb`  
 **Git 状态**: ✅ 已提交初始版本  
 **提交哈希**: 2ab6bc4  
 **完成日期**: 2026-03-31  
@@ -265,7 +265,7 @@ OpenERB System Architecture
 
 ```bash
 # 初始化开发环境
-cd /home/daojie/openerb
+cd ~/openerb
 python -m venv venv
 source venv/bin/activate
 pip install -e .
@@ -290,7 +290,7 @@ git log --oneline
 
 **项目名称**: OpenERB (Open Embodied Robot Brain)  
 **项目简称**: openerb  
-**项目目录**: /home/daojie/openerb  
+**项目目录**: ~/openerb  
 **Git 仓库**: https://github.com/openerb/openerb (待创建)  
 **开发周期**: 20 周 (目标 2026-08-31 完成)  
 **投稿目标**: IEEE TRO / Science Robotics  

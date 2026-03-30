@@ -281,8 +281,8 @@ source venv/bin/activate  # Linux/Mac
 # or
 venv\Scripts\activate  # Windows
 
-# 2. 安装依赖
-pip install -r requirements.txt
+# 2. 安装依赖 (使用 pyproject.toml)
+pip install -e .
 
 # 3. 初始化系统
 python -m openerb.core.bootstrap init --robot-type G1
@@ -291,7 +291,7 @@ python -m openerb.core.bootstrap init --robot-type G1
 pytest tests/
 
 # 5. 启动对话 Agent (后续实现)
-python -m openerb.run
+python -m openerb
 ```
 
 ---
