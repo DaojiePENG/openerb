@@ -55,6 +55,14 @@ class TaskStatus(str, Enum):
     REJECTED = "rejected"
 
 
+class SandboxType(str, Enum):
+    """Execution sandbox types for code safety."""
+    RESTRICTED_PYTHON = "restricted_python"  # RestrictedPython with AST analysis
+    DOCKER = "docker"                        # Docker container isolation
+    PROCESS = "process"                      # Isolated subprocess with timeout
+    DISABLED = "disabled"                    # No sandbox (development only)
+
+
 # ============================================================================
 # Core Data Structures
 # ============================================================================
@@ -221,6 +229,27 @@ class SkillPackage:
     metadata: Dict[str, Any]
     timestamp: datetime = field(default_factory=datetime.now)
     source_robot_id: Optional[str] = None
+
+
+@dataclass
+class CodeExecutionPolicy:
+    """Security policy for code execution."""
+    sandbox_type: 'SandboxType' = SandboxType.RESTRICTED_PYTHON
+    timeout: float = 60.0  # seconds
+    max_memory: Optional[int] = None  # MB
+    allowed_imports: List[str] = field(default_factory=lambda: [
+        "math", "random", "time", "collections", "itertools"
+    ])
+    forbidden_modules: List[str] = field(default_factory=lambda: [
+        "os", "sys", "subprocess", "socket", "threading", "multiprocessing"
+    ])
+    forbidden_builtins: List[str] = field(default_factory=lambda: [
+        "exec", "eval", "compile", "__import__", "open", "input"
+    ])
+    enable_network: bool = False
+    enable_file_access: bool = False
+    enable_subprocess: bool = False
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

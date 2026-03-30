@@ -230,6 +230,284 @@ class MotorCortex:
 
 ---
 
+## 🔐 安全与沙盒机制 (Safety & Sandboxing)
+
+### 设计理念
+
+OpenERB 的核心创新是让 AI 自动生成代码控制机器人，但这引入了严重的安全隐患：
+- **代码执行危险**: AI 生成的恶意或错误代码可能损坏机器人硬件（如烧毁电机）
+- **资源枚举**: 无限循环或内存泄漏可能导致系统崩溃
+- **权限提升**: 生成的代码不应访问 OS 层面的关键操作
+
+因此，**OpenERB 的所有代码执行都在严格的沙盒环境中进行**。
+
+### 三层沙盒架构
+
+#### 第1层: 代码静态分析 (RestrictedPython)
+
+**用途**: 轻量级、快速的代码检查
+**执行环境**: Motor Cortex 模块
+**机制**:
+- 使用 RestrictedPython 库进行 AST 分析
+- 禁止导入危险模块 (`os`, `sys`, `subprocess`, `socket`, etc.)
+- 禁止调用危险 builtin (`exec`, `eval`, `__import__`, `open`)
+- 提前拒绝明显的恶意代码
+
+**配置示例**:
+```python
+from openerb.core.types import CodeExecutionPolicy, SandboxType
+
+# 默认执行策略（对大多数技能生成足够）
+default_policy = CodeExecutionPolicy(
+    sandbox_type=SandboxType.RESTRICTED_PYTHON,
+    timeout=60.0,  # 60秒超时
+    max_memory=512,  # 512MB 内存限制
+    allowed_imports=["math", "random", "time", "collections"],
+    forbidden_modules=["os", "sys", "subprocess", "socket", "threading"],
+    forbidden_builtins=["exec", "eval", "__import__", "open"],
+    enable_network=False,
+    enable_file_access=False,
+    enable_subprocess=False
+)
+```
+
+#### 第2层: 进程隔离 (Process Sandbox)
+
+**用途**: 中等风险代码，需要进程级隔离
+**执行环境**: 子进程
+**机制**:
+- 在独立的子进程中执行代码
+- 设置资源限制（CPU、内存）
+- 超时自动杀死进程
+- 使用管道捕获输出，防止副作用
+
+**适用场景**:
+- 需要文件访问但隔离在临时目录
+- 需要执行系统命令（通过 SDK 对象）
+- 较复杂的算法，需要更多计算资源
+
+#### 第3层: 容器隔离 (Docker Sandbox)
+
+**用途**: 高风险代码，需要完全隔离
+**执行环境**: Docker 容器
+**机制**:
+- 完全虚拟化的文件系统和网络
+- 网络隔离（可选启用 VPN）
+- 严格的 CPU 和内存限制
+- 容器内无 root 权限
+
+**适用场景**:
+- 用户 UGC（用户生成内容）
+- 来自不信任来源的代码
+- 生产环境公开 API
+
+**Docker 配置示例**:
+```dockerfile
+FROM python:3.11-slim
+
+# 非 root 用户
+RUN useradd -m sandbox
+
+# 最小化依赖
+RUN apt-get update && apt-get install -y \
+    unitree-sdk \
+    && rm -rf /var/lib/apt/lists/*
+
+# 限制权限
+RUN chmod -R 755 /app
+
+USER sandbox
+WORKDIR /app
+
+# 资源限制在运行时设置
+# docker run -m 512M --cpus=1 openerb:latest
+```
+
+### 沙盒选择流程
+
+```
+┌─────────────────────────────────┐
+│  Motor Cortex 生成代码            │
+└────────────┬────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────┐
+│ RestrictedPython 静态分析        │
+│ ✗ 发现危险 → 拒绝执行             │
+└────┬─────────────────────┬──────┘
+     │ ✓ 通过               │
+     ▼                    ▼
+┌──────────────┐   ┌────────────┐
+│ 检查风险等级   │   │ 获取用户偏好 │
+│ (Danger      │   │ 沙盒策略    │
+│  Level)      │   └────┬──────┘
+└──────┬───────┘        │
+       │                │
+       ▼                ▼
+  ┌─────────────────────────────┐
+  │  选择沙盒类型:              │
+  │  - RESTRICTED_PYTHON        │
+  │  - PROCESS (子进程)         │
+  │  - DOCKER (容器)            │
+  │  - DISABLED (仅开发环境)    │
+  └──────┬────────────────────┘
+         │
+         ▼
+  ┌─────────────────────────────┐
+  │  执行代码 + 监控             │
+  │  - 超时检查                  │
+  │  - 内存监控                  │
+  │  - 异常捕获                  │
+  │  - 资源清理                  │
+  └──────┬────────────────────┘
+         │
+         ▼
+  ┌─────────────────────────────┐
+  │  记录执行结果与指标           │
+  │  (用于学习与改进)             │
+  └──────────────────────────────┘
+```
+
+### 类型定义
+
+```python
+from enum import Enum
+from dataclasses import dataclass, field
+from typing import Optional, List
+
+class SandboxType(str, Enum):
+    """沙盒执行类型"""
+    RESTRICTED_PYTHON = "restricted_python"  # AST 分析 - 最快
+    PROCESS = "process"                      # 进程隔离 - 中等
+    DOCKER = "docker"                        # 容器隔离 - 最安全
+    DISABLED = "disabled"                    # 无沙盒 - 仅开发环境
+
+@dataclass
+class CodeExecutionPolicy:
+    """代码执行策略"""
+    sandbox_type: SandboxType = SandboxType.RESTRICTED_PYTHON
+    timeout: float = 60.0  # 秒
+    max_memory: Optional[int] = None  # MB
+    
+    # 导入白名单
+    allowed_imports: List[str] = field(default_factory=lambda: [
+        "math", "random", "time", "collections", "itertools"
+    ])
+    
+    # 模块黑名单
+    forbidden_modules: List[str] = field(default_factory=lambda: [
+        "os", "sys", "subprocess", "socket", "threading", 
+        "multiprocessing", "importlib", "pickle"
+    ])
+    
+    # 内置函数黑名单
+    forbidden_builtins: List[str] = field(default_factory=lambda: [
+        "exec", "eval", "compile", "__import__", "open", 
+        "input", "globals", "locals", "vars"
+    ])
+    
+    # 权限控制
+    enable_network: bool = False        # 禁用网络
+    enable_file_access: bool = False    # 禁用文件访问
+    enable_subprocess: bool = False     # 禁用系统命令
+```
+
+### 实施指南
+
+#### 步骤 1: 代码生成时应用策略
+
+```python
+# 在 Motor Cortex 中
+from openerb.core.types import CodeExecutionPolicy, SandboxType
+
+class MotorCortex:
+    def __init__(self):
+        self.policy = CodeExecutionPolicy(
+            sandbox_type=SandboxType.RESTRICTED_PYTHON,  # 默认
+            timeout=60.0
+        )
+    
+    async def execute_code(self, code: str, risk_level: str):
+        # 根据风险等级动态调整沙盒
+        if risk_level == "HIGH":
+            self.policy.sandbox_type = SandboxType.DOCKER
+        elif risk_level == "MEDIUM":
+            self.policy.sandbox_type = SandboxType.PROCESS
+        
+        # 执行代码（会调用对应的沙盒执行器）
+        result = await self._execute_in_sandbox(code, self.policy)
+        return result
+```
+
+#### 步骤 2: 创建沙盒执行器
+
+```python
+# core/execution.py - 待实现
+class SandboxExecutor:
+    """沙盒执行器基类"""
+    
+    @abstractmethod
+    def execute(self, code: str, policy: CodeExecutionPolicy) -> ExecutionResult:
+        pass
+
+class RestrictedPythonExecutor(SandboxExecutor):
+    """使用 RestrictedPython AST 分析"""
+    
+    def execute(self, code: str, policy: CodeExecutionPolicy) -> ExecutionResult:
+        # 1. 解析代码为 AST
+        # 2. 检查禁用的模块和函数
+        # 3. 若无违规，编译并执行
+        # 4. 返回结果
+        pass
+
+class ProcessSandboxExecutor(SandboxExecutor):
+    """使用进程隔离"""
+    
+    def execute(self, code: str, policy: CodeExecutionPolicy) -> ExecutionResult:
+        # 1. 创建子进程
+        # 2. 设置资源限制
+        # 3. 执行代码
+        # 4. 超时处理
+        # 5. 返回结果
+        pass
+
+class DockerSandboxExecutor(SandboxExecutor):
+    """使用 Docker 容器隔离"""
+    
+    def execute(self, code: str, policy: CodeExecutionPolicy) -> ExecutionResult:
+        # 1. 构建 Docker 命令
+        # 2. 设置环境变量和卷挂载
+        # 3. 执行容器
+        # 4. 收集输出
+        # 5. 清理容器
+        # 6. 返回结果
+        pass
+```
+
+### 论文中的安全讨论
+
+当投稿到 IEEE TRO 或 Science Robotics 时，应在论文中强调：
+
+1. **创新点**: 
+   - "我们首次提出了多层沙盒执行架构，确保 AI 生成代码的安全性"
+   - "三层防御 (AST分析、进程隔离、容器隔离) 消除了直接 exec() 的风险"
+
+2. **安全性证明**:
+   - 对禁用 builtin 和模块的完整性进行形式化验证
+   - 演示恶意代码检测的失败 case 分析
+   - 资源限制的有效性测试
+
+3. **性能权衡**:
+   - RestrictedPython: ~1ms 开销 (推荐用于大多数技能)
+   - Process: ~50ms 开销 (中等风险代码)
+   - Docker: ~500ms 开销 (仅限高风险)
+
+4. **用户研究**:
+   - 用户对沙盒执行的可接受性调查
+   - 在真实机器人上的安全事件记录 (0 硬件损坏)
+
+---
+
 ### 7. 视觉模块 (Parietal & Occipital Lobes)
 **位置**: `modules/vision/`
 

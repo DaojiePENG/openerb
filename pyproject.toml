@@ -2,6 +2,10 @@
 requires = ["setuptools>=65.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+# Note: This project supports both pip and uv for dependency management
+# uv is recommended for faster package resolution and environment setup
+# See: https://docs.astral.sh/uv/
+
 [project]
 name = "openerb"
 version = "0.1.0"

@@ -10,9 +10,21 @@
 - Python 3.9+
 - Unitree G1 或 Go2 机器人
 - 阿里 DASHSCOPE API 密钥
+- **推荐**: uv 包管理工具 (更快的依赖解析)
 
 ### 安装
 
+使用 **uv** (推荐):
+```bash
+# 使用 uv 创建虚拟环境 (比 venv 快得多)
+uv venv --python 3.11
+source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+
+# 安装依赖
+uv pip install -e .
+```
+
+或使用传统 pip:
 ```bash
 # 1. 配置环境变量
 export DASHSCOPE_API_KEY="sk-xxx"
