@@ -4,7 +4,18 @@
 
 一个完全自主的、自我进化的、具有多模态交互能力的机器人大脑。
 
-## 快速开始
+## 📚 文档导航
+
+| 文档 | 用途 | 用户 |
+|------|------|------|
+| [README.md](README.md) | 项目概览 | 所有人 |
+| [QUICK_START.md](QUICK_START.md) | 3 分钟快速开始 | 新用户 |
+| [PHASE1_COMPLETE.md](PHASE1_COMPLETE.md) | Phase 1 交付总结 | 项目经理 |
+| [docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md) | 完整系统设计 + 安全架构 | 架构师/开发者 |
+| [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) | 5 阶段开发路线图 | 项目规划 |
+| [docs/SAFETY_SANDBOX_GUIDE.md](docs/SAFETY_SANDBOX_GUIDE.md) | 沙盒执行实现指南 | 后端开发者 |
+
+
 
 ### 环境要求
 - Python 3.9+
