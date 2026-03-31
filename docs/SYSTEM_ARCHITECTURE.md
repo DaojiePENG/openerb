@@ -4,70 +4,79 @@
 
 本项目实现一个自主学习和进化的机器人控制系统，机器人能够基于人类指令自动生成控制代码、记忆技能、进行安全检验，并在不同机器人平台间迁移知识。该系统采用类脑结构设计，融合神经科学概念与工程实现。
 
-## 系统整体架构
+## 系统整体架构与完整数据流
 
-```
-┌─────────────────────────────────────────────────────────┐
-│              对话入口 (前额叶皮层代理)                    │
-│        Multi-Modal LLM Agent (Qwen-VL-Plus)              │
-└────────────────────┬────────────────────────────────────┘
-                     │
-        ┌────────────┴────────────┐
-        │                         │
-        ▼                         ▼
-┌────────────────────┐   ┌────────────────────┐
-│  意图理解            │   │  任务规划          │
-│  & 任务分解          │   │  & 逻辑判断        │
-└─────────┬──────────┘   └────────┬───────────┘
-          │                       │
-          └───────────┬───────────┘
-                      ▼
-        ┌─────────────────────────────────┐
-        │   边缘系统 (安全约束引擎)        │
-        │  - 安全校验                      │
-        │  - 危险检测                      │
-        │  - 二次确认机制                  │
-        └─────────────┬───────────────────┘
-                      ▼
-        ┌─────────────────────────────────┐
-        │  岛叶皮层 (机体自我认知)         │
-        │  - 机器人型号识别 (G1/Go2)      │
-        │  - 能力集合管理                  │
-        │  - 平台特性映射                  │
-        └─────────────┬───────────────────┘
-                      ▼
-        ┌─────────────────────────────────┐
-        │  小脑 (技能记忆库)               │
-        │  - 技能检索与匹配                │
-        │  - 版本管理                      │
-        │  - 垃圾箱管理                    │
-        └─────────────┬───────────────────┘
-                      ▼
-        ┌─────────────────────────────────┐
-        │  海马体 (长期记忆管理)           │
-        │  - 技能固化                      │
-        │  - 知识持久化                    │
-        │  - 学习曲线管理                  │
-        └─────────────┬───────────────────┘
-                      ▼
-        ┌─────────────────────────────────┐
-        │  运动皮层 (代码生成引擎)         │
-        │  - 代码模板库                    │
-        │  - SDK调用生成                   │
-        │  - 动态编译与执行                │
-        └─────────────┬───────────────────┘
-                      ▼
-        ┌─────────────────────────────────┐
-        │  视觉模块 (顶叶&枕叶)            │
-        │  - 多模态感知                    │
-        │  - 人脸识别                      │
-        │  - 用户档案管理                  │
-        └─────────────────────────────────┘
+### 1. 端到端系统数据流
+
+该流程展示用户输入从理解→规划→安全检验→执行→学习反馈的完整链路，包括所有26+关键数据类型及其流向。
+
+```mermaid
+graph TD
+    Start["🗣️ 用户多模态输入 (text + optional image)"] 
+    
+    Start --> PC["前额叶皮层 Prefrontal Cortex"]
+    PC -->|"Intent"| Intent["📋 Intent - raw_text: str - action: str - parameters: dict - confidence: float"]
+    
+    Intent --> PC2["意图验证和任务分解"]
+    PC2 -->|"List[Subtask]"| Tasks["📋 Subtask List - task_id: str - description: str - dependencies: list - priority: int"]
+    
+    Tasks --> IC["岛叶皮层 Insular Cortex"]
+    IC -->|"RobotProfile"| RobotProf["🤖 RobotProfile - robot_type: RobotType - body_id: str - capabilities: dict - firmware_version: str"]
+    
+    RobotProf --> IC2["创建执行上下文"]
+    IC2 -->|"ConversationContext"| ConvCtx["💬 ConversationContext - current_user: UserProfile - current_robot: RobotProfile - conversation_history - sensor_data: SensorData"]
+    
+    ConvCtx --> CB["小脑 Cerebellum (Skill Search &amp; Retrieval)"]
+    CB -->|"Skill Found? (TF-IDF/Semantic)"| SkillCache{"🔍 Skill 缓存命中?"}
+    
+    SkillCache -->|"✅ YES Cache Hit"| Skill["📚 Skill(Found) - name: str - code: str - version: str - success_rate: float - supported_robots: list"]
+    
+    SkillCache -->|"❌ NO Cache Miss"| MC["运动皮层 Motor Cortex (Code Generation)"]
+    MC -->|"Generated Code + Context"| GenCode["💾 Generated Code - raw_code: str - template_used: str - dependencies: list - estimated_risk: str"]
+    
+    GenCode --> Skill
+    Skill --> RobotCtx["准备机器人执行上下文"]
+    Skill -->|"RobotContext"| RobotCtx
+    
+    RobotCtx --> LS["边缘系统 Limbic System (Safety Assessment)"]
+    LS -->|"Action + SensorData"| SafetyAss["⚠️ SafetyAssessment - is_safe: bool - danger_level: DangerLevel - risk_factors: list - reason: str"]
+    
+    SafetyAss --> DangerCheck{"⚠️ DangerLevel?"}
+    DangerCheck -->|"🟢 GREEN Safe"| Green["✅ 直接执行"]
+    DangerCheck -->|"🟡 YELLOW 需要确认"| Yellow["🔔 请求用户确认 (可选中止)"]
+    DangerCheck -->|"🔴 RED 危险"| Red["❌ 拒绝执行 建议安全替代方案"]
+    
+    Green --> Exec
+    Yellow -->|"用户确认"| Exec["执行代码 (沙盒执行)"]
+    Red --> Feedback
+    
+    Exec -->|"ExecutionResult"| Result["🎯 ExecutionResult - success: bool - output: str - error: str - execution_time: float"]
+    
+    Result --> HPC["海马体 Hippocampus (Learning &amp; Memory)"]
+    HPC -->|"LearningRecord"| Learning["📊 LearningRecord - skill_id: str - user_id: str - success: bool - execution_time - timestamp: datetime"]
+    
+    Learning --> UpdateSkill["更新技能统计"]
+    UpdateSkill -->|"更新 success_rate"| SkillUpdate["🔄 Skill Updated - success_rate↑ - version↑ - adaptation_history"]
+    
+    SkillUpdate --> Feedback["📝 反馈给用户 ExecutionResult + LearningRecord"]
+    Feedback --> End["🏁 任务完成"]
+    
+    style Start fill:#e1f5ff
+    style PC fill:#fff9c4
+    style IC fill:#fff9c4
+    style CB fill:#fff9c4
+    style MC fill:#fff9c4
+    style LS fill:#fff9c4
+    style HPC fill:#fff9c4
+    style Green fill:#c8e6c9
+    style Yellow fill:#ffe0b2
+    style Red fill:#ffccbc
+    style End fill:#e1f5ff
 ```
 
 ## 核心模块详细说明
 
-### 1. 前额叶皮层 (Prefrontal Cortex) - 对话Agent
+### 4. 前额叶皮层 (Prefrontal Cortex) - 对话Agent
 **位置**: `modules/prefrontal_cortex/`
 
 **职责**:
@@ -88,7 +97,7 @@ class PrefrontalCortex:
 
 ---
 
-### 2. 岛叶皮层 (Insular Cortex) - 机体自我认知
+### 5. 岛叶皮层 (Insular Cortex) - 机体自我认知
 **位置**: `modules/insular_cortex/`
 
 **职责**:
@@ -118,7 +127,7 @@ class RobotProfile:
 
 ---
 
-### 3. 边缘系统 (Limbic System & Amygdala) - 安全约束
+### 6. 边缘系统 (Limbic System & Amygdala) - 安全约束
 **位置**: `modules/limbic_system/`
 
 **职责**:
@@ -143,7 +152,7 @@ class LimbicSystem:
 
 ---
 
-### 4. 小脑 (Cerebellum) - 技能记忆库
+### 7. 小脑 (Cerebellum) - 技能记忆库
 **位置**: `modules/cerebellum/`
 
 **职责**:
@@ -181,7 +190,7 @@ class Skill:
 
 ---
 
-### 5. 海马体 (Hippocampus) - 长期记忆
+### 8. 海马体 (Hippocampus) - 长期记忆
 **位置**: `modules/hippocampus/`
 
 **职责**:
@@ -202,7 +211,7 @@ class Hippocampus:
 
 ---
 
-### 6. 运动皮层 (Motor Cortex) - 代码生成
+### 9. 运动皮层 (Motor Cortex) - 代码生成
 **位置**: `modules/motor_cortex/`
 
 **职责**:
@@ -323,49 +332,149 @@ WORKDIR /app
 # docker run -m 512M --cpus=1 openerb:latest
 ```
 
-### 沙盒选择流程
+### 2. 三层沙盒执行完整流程
 
+该流程展示从代码生成→静态分析→风险评估→多策略执行→监控的完整沙盒执行链路。
+
+```mermaid
+graph TD
+    Start["Motor Cortex 生成代码"] 
+    Start -->|"code: str"| GenCode["📝 Generated Code - raw_code - dependencies - estimated_risk"]
+    
+    GenCode --> AST["第1层: 代码静态分析 RestrictedPython AST"]
+    AST -->|"AST 检查"| ASTCheck{"✓ AST 通过检查?"}
+    
+    ASTCheck -->|"❌ 检测到禁用操作"| Reject1["🚫 拒绝执行 - 违规操作: exec, eval, etc - 危险模块: os, sys, etc - 记录审计日志"]
+    Reject1 --> EndReject["❌ 返回错误结果"]
+    
+    ASTCheck -->|"✅ 通过 符合安全规则"| Assessment["风险评估 (CodeExecutionPolicy)"]
+    
+    Assessment -->|"分析:"| RiskAnalysis["📊 风险评估因子 - 导入模块复杂度 - 递归深度 - 内存使用量 - 执行时间估计 - 用户信任度"]
+    
+    RiskAnalysis -->|"评分 + DangerLevel"| RiskLevel{"⚠️ 风险等级?"}
+    
+    RiskLevel -->|"🟢 GREEN 低风险 ~0-1ms 开销"| L1["第1层执行 RestrictedPython"]
+    L1 --> L1Config["🔒 L1 Policy - sandbox: RESTRICTED_PYTHON - timeout: 60s - max_memory: 512MB - allowed_imports: [math, random] - forbidden: [os, sys, socket]"]
+    L1Config --> L1Exec["▶️ 执行 in-process"]
+    
+    RiskLevel -->|"🟡 YELLOW 中风险 ~50ms 开销"| L2["第2层执行 进程隔离 subprocess"]
+    L2 --> L2Config["🔒 L2 Policy - sandbox: PROCESS - timeout: 120s - max_memory: 1GB - cpu_limit: 2 cores - isolated_temp_dir"]
+    L2Config --> L2Exec["▶️ 创建子进程执行 fork + setrlimit"]
+    
+    RiskLevel -->|"🔴 RED 高风险/不信任 ~500ms 开销"| L3["第3层执行 Docker 容器隔离"]
+    L3 --> L3Config["🔒 L3 Policy - sandbox: DOCKER - timeout: 300s - max_memory: 512MB - no_network: true - non-root_user - read-only_fs"]
+    L3Config --> L3Exec["▶️ 启动 Docker 容器 docker run --rm ..."]
+    
+    L1Exec --> Monitor1["📊 监控执行"]
+    L2Exec --> Monitor2["📊 监控执行"]
+    L3Exec --> Monitor3["📊 监控执行"]
+    
+    Monitor1 -->|"每 100ms 检查"| M1Check["监控指标: - CPU 使用率 - 内存占用 - 执行超时? - 异常捕获"]
+    Monitor2 --> M2Check["监控指标: - 子进程状态 - 资源限制遵守 - 超时自杀 - 管道输出"]
+    Monitor3 --> M3Check["监控指标: - 容器资源限制 - 网络隔离验证 - 容器健康检查 - 异常容器清理"]
+    
+    M1Check --> CollectResult["收集执行结果"]
+    M2Check --> CollectResult
+    M3Check --> CollectResult
+    
+    CollectResult -->|"ExecutionResult"| Result["🎯 ExecutionResult - success: bool - output: str - error: Optional[str] - execution_time: float - sandbox_type: SandboxType"]
+    
+    Result --> Success{"✅ 执行 成功?"}
+    Success -->|"YES"| UpdateProfile["✅ 更新技能档案 - success_rate += 1 - version upgrade - LearningRecord 记录"]
+    Success -->|"NO"| LogError["❌ 记录错误 - 失败原因 - 错误堆栈 - 重试策略"]
+    
+    UpdateProfile --> EndOK["🏁 返回成功结果 给用户"]
+    LogError --> EndFail["🏁 返回失败结果 + 建议方案"]
+    
+    EndReject --> End["🏁"]
+    EndOK --> End
+    EndFail --> End
+    
+    style Start fill:#e1f5ff
+    style L1 fill:#c8e6c9
+    style L2 fill:#ffe0b2
+    style L3 fill:#ffccbc
+    style Reject1 fill:#ffccbc
+    style End fill:#e1f5ff
+    style CollectResult fill:#f3e5f5
+    style Monitor1 fill:#e0f2f1
+    style Monitor2 fill:#e0f2f1
+    style Monitor3 fill:#e0f2f1
 ```
-┌─────────────────────────────────┐
-│  Motor Cortex 生成代码            │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│ RestrictedPython 静态分析        │
-│ ✗ 发现危险 → 拒绝执行             │
-└────┬─────────────────────┬──────┘
-     │ ✓ 通过               │
-     ▼                    ▼
-┌──────────────┐   ┌────────────┐
-│ 检查风险等级   │   │ 获取用户偏好 │
-│ (Danger      │   │ 沙盒策略    │
-│  Level)      │   └────┬──────┘
-└──────┬───────┘        │
-       │                │
-       ▼                ▼
-  ┌─────────────────────────────┐
-  │  选择沙盒类型:              │
-  │  - RESTRICTED_PYTHON        │
-  │  - PROCESS (子进程)         │
-  │  - DOCKER (容器)            │
-  │  - DISABLED (仅开发环境)    │
-  └──────┬────────────────────┘
-         │
-         ▼
-  ┌─────────────────────────────┐
-  │  执行代码 + 监控             │
-  │  - 超时检查                  │
-  │  - 内存监控                  │
-  │  - 异常捕获                  │
-  │  - 资源清理                  │
-  └──────┬────────────────────┘
-         │
-         ▼
-  ┌─────────────────────────────┐
-  │  记录执行结果与指标           │
-  │  (用于学习与改进)             │
-  └──────────────────────────────┘
+
+### 3. 模块间数据类型交互架构
+
+该图展示8个类脑模块如何通过26+核心数据类型进行交互和通信。
+
+```mermaid
+graph TB
+    User["👤 User 用户输入 (text/image)"]
+    
+    subgraph Input Layer
+        User -->|"text + image"| PC["前额叶皮层 Prefrontal Cortex"]
+    end
+    
+    subgraph Understanding
+        PC -->|"Intent Subtask ConversationTurn"| Intent["📋 意图理解"]
+        Intent -->|"IntentResult"| PC
+    end
+    
+    subgraph Planning
+        Intent -->|"Intent RobotCapabilities SensorData"| IC["岛叶皮层 Insular Cortex"]
+        IC -->|"RobotProfile RobotContext"| PlanningNode["📋 身体认知 &amp; 能力映射"]
+    end
+    
+    subgraph Memory
+        PlanningNode -->|"RobotCapabilities Skill Query ConversationContext"| CB["小脑 Cerebellum"]
+        CB -->|"Skill SkillPackage AdaptedSkill"| MemoryNode["📚 技能检索 &amp; 版本管理"]
+    end
+    
+    subgraph Generation
+        MemoryNode -->|"Intent + Skill RobotContext cached/not cached"| MC["运动皮层 Motor Cortex"]
+        MC -->|"GeneratedCode CodeExecutionPolicy"| GenerationNode["⚙️ 代码生成 &amp; SDK集成"]
+    end
+    
+    subgraph Safety
+        GenerationNode -->|"Action GeneratedCode SensorData RobotContext"| LS["边缘系统 Limbic System"]
+        LS -->|"SafetyAssessment DangerLevel ConfirmationNeeded"| SafetyNode["⚠️ 安全评估 &amp; 风险检测"]
+    end
+    
+    subgraph Execution
+        SafetyNode -->|"ExecutionPolicy CodeExecutionPolicy DangerLevel"| Exec["执行引擎 Sandbox Executor"]
+        Exec -->|"ExecutionResult output/error execution_time"| ExecRes["🎯 代码执行 &amp; 监控"]
+    end
+    
+    subgraph Learning
+        ExecRes -->|"ExecutionResult Skill RobotContext UserProfile"| Hip["海马体 Hippocampus"]
+        Hip -->|"LearningRecord UpdatedSkill ConversationContext"| Learn["📊 技能学习 &amp; 知识固化"]
+    end
+    
+    subgraph Perception
+        User -->|"Image UserProfile Query"| Vision["视觉模块 Vision &amp; Occipital"]
+        Vision -->|"FaceEmbedding SceneInfo UserProfile Updated"| Perc["👁️ 人脸识别 &amp; 场景理解"]
+    end
+    
+    subgraph Communication
+        Learn -->|"SkillPackage LearningRecord best_practices"| Comm["通信模块 Robot Communication"]
+        Comm -->|"SharedSkill KnowledgeGraph"| Comm2["🔗 机器人间 知识共享"]
+    end
+    
+    Learn -->|"最终反馈"| User
+    Perc -->|"用户识别"| PC
+    Comm2 -->|"新技能"| CB
+    
+    style PC fill:#fff9c4
+    style IC fill:#fff9c4
+    style CB fill:#fff9c4
+    style MC fill:#fff9c4
+    style LS fill:#fff9c4
+    style Hip fill:#fff9c4
+    style Vision fill:#fff9c4
+    style Comm fill:#fff9c4
+    style User fill:#e1f5ff
+    style ExecRes fill:#c8e6c9
+    style Learn fill:#f3e5f5
+    style SafetyNode fill:#ffccbc
 ```
 
 ### 类型定义
@@ -508,7 +617,7 @@ class DockerSandboxExecutor(SandboxExecutor):
 
 ---
 
-### 7. 视觉模块 (Parietal & Occipital Lobes)
+### 10. 视觉模块 (Parietal & Occipital Lobes)
 **位置**: `modules/vision/`
 
 **职责**:
@@ -528,7 +637,7 @@ class VisionModule:
 
 ---
 
-### 8. 通信与协作模块
+### 11. 通信与协作模块
 **位置**: `modules/communication/`
 
 **职责**:
