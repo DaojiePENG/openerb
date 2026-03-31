@@ -82,7 +82,7 @@ class InsularCortex:
 
 ---
 
-#### 2.3 边缘系统 (Limbic System) - 安全约束
+#### 2.3 边缘系统・杏仁核 (Limbic System & Amygdala) - 安全约束
 **预期时间**: 2周
 **关键任务**:
 - [ ] 动作安全评估

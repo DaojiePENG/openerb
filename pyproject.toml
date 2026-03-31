@@ -14,7 +14,7 @@ readme = "README.md"
 authors = [
     {name = "OpenERB Project", email = "info@openerb.dev"}
 ]
-license = "MIT"
+license = {text = "MIT"}
 requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -62,10 +62,11 @@ Repository = "https://github.com/openerb/openerb.git"
 Documentation = "https://github.com/openerb/openerb/tree/main/docs"
 
 [tool.setuptools]
-packages = ["openerb"]
+py-modules = ["__main__"]
+packages = ["core", "modules"]
 
 [tool.setuptools.package-data]
-openerb = ["py.typed"]
+core = ["py.typed"]
 
 [tool.black]
 line-length = 100

@@ -81,8 +81,8 @@ class Intent:
 @dataclass
 class Subtask:
     """A decomposed subtask from a user intent."""
-    task_id: str = field(default_factory=lambda: str(uuid4()))
     intent: Intent
+    task_id: str = field(default_factory=lambda: str(uuid4()))
     priority: int = 0
     dependencies: List[str] = field(default_factory=list)
     status: TaskStatus = TaskStatus.PENDING
@@ -104,10 +104,10 @@ class RobotProfile:
 @dataclass
 class Skill:
     """A reusable skill/capability."""
-    skill_id: str = field(default_factory=lambda: str(uuid4()))
     name: str
     description: str
     code: str  # Python code
+    skill_id: str = field(default_factory=lambda: str(uuid4()))
     dependencies: List[str] = field(default_factory=list)
     tags: List[str] = field(default_factory=list)
     supported_robots: List[RobotType] = field(default_factory=list)
@@ -156,9 +156,9 @@ class SensorData:
 @dataclass
 class Action:
     """An action to be executed on the robot."""
-    action_id: str = field(default_factory=lambda: str(uuid4()))
     action_type: str  # e.g., "move_forward", "turn", "grab"
     parameters: Dict[str, Any]
+    action_id: str = field(default_factory=lambda: str(uuid4()))
     timeout: float = 30.0  # seconds
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -187,10 +187,10 @@ class ExecutionResult:
 @dataclass
 class ConversationTurn:
     """A single turn in the conversation."""
-    turn_id: str = field(default_factory=lambda: str(uuid4()))
     user_input: str
+    turn_id: str = field(default_factory=lambda: str(uuid4()))
     user_image: Optional[bytes] = None
-    robot_response: str
+    robot_response: str = ""
     intents: List[Intent] = field(default_factory=list)
     actions_taken: List[Action] = field(default_factory=list)
     timestamp: datetime = field(default_factory=datetime.now)
