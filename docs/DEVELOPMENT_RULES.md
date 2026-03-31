@@ -85,6 +85,8 @@
 - [ ] 是否创建了不必要的新文档？
 - [ ] 是否在 DEVELOPMENT_PLAN.md 中更新了进度？
 - [ ] 是否在 SYSTEM_ARCHITECTURE.md 中更新了系统设计（如有新模块）？
+- [ ] 是否在 README.md 中更新了项目概览？
+- [ ] 是否在 QUICK_START.md 中更新了快速启动说明？
 - [ ] 代码是否通过了测试？
 - [ ] 是否已经展示了 git 提交内容等待确认？
 
