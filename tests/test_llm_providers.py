@@ -37,48 +37,31 @@ class TestDashscopeProvider:
         )
         assert provider.validate_config() is True
 
-    def test_get_headers(self):
-        """Test header generation."""
-        provider = DashscopeProvider(
-            api_key="sk-test-key",
-            model="qwen-vl-plus",
-        )
-        headers = provider._get_headers()
-        assert headers["Authorization"] == "Bearer sk-test-key"
-        assert headers["Content-Type"] == "application/json"
-
-    def test_prepare_payload_text_only(self):
-        """Test payload preparation with text-only message."""
-        provider = DashscopeProvider(
-            api_key="sk-test-key",
-            model="qwen-vl-plus",
-        )
-        messages = [Message(role="user", content="Hello")]
-        payload = provider._prepare_payload(messages, temperature=0.7, max_tokens=100)
-
-        assert payload["model"] == "qwen-vl-plus"
-        assert payload["temperature"] == 0.7
-        assert payload["max_tokens"] == 100
-        assert len(payload["messages"]) == 1
-        assert payload["messages"][0]["content"] == "Hello"
-
-    def test_prepare_payload_with_image_url(self):
-        """Test payload preparation with image URL."""
+    def test_convert_to_dashscope_format(self):
+        """Test message format conversion to DashScope format."""
         provider = DashscopeProvider(
             api_key="sk-test-key",
             model="qwen-vl-plus",
         )
         messages = [
+            Message(role="user", content="Hello"),
             Message(
                 role="user",
                 content="What's in this image?",
                 image_url="https://example.com/image.jpg",
-            )
+            ),
         ]
-        payload = provider._prepare_payload(messages, temperature=0.7, max_tokens=None)
+        dashscope_messages = provider._convert_to_dashscope_format(messages)
 
-        assert len(payload["messages"]) == 1
-        assert "https://example.com/image.jpg" in payload["messages"][0]["content"]
+        assert len(dashscope_messages) == 2
+        assert dashscope_messages[0]["role"] == "user"
+        assert len(dashscope_messages[0]["content"]) == 1
+        assert dashscope_messages[0]["content"][0] == {"text": "Hello"}
+
+        assert dashscope_messages[1]["role"] == "user"
+        assert len(dashscope_messages[1]["content"]) == 2
+        assert dashscope_messages[1]["content"][0] == {"text": "What's in this image?"}
+        assert dashscope_messages[1]["content"][1] == {"image": "https://example.com/image.jpg"}
 
     def test_parse_response_valid(self):
         """Test response parsing with valid response."""
@@ -86,14 +69,11 @@ class TestDashscopeProvider:
             api_key="sk-test-key",
             model="qwen-vl-plus",
         )
+        # Official SDK response format
         response_data = {
             "output": {
-                "choices": [
-                    {
-                        "message": {"content": "Hello!"},
-                        "finish_reason": "stop",
-                    }
-                ]
+                "text": "Hello!",
+                "finish_reason": "stop",
             },
             "usage": {
                 "input_tokens": 10,
@@ -132,20 +112,16 @@ class TestDashscopeProvider:
 
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
+        mock_response.get.side_effect = lambda key, default=None: {
             "output": {
-                "choices": [
-                    {
-                        "message": {"content": "Hi there!"},
-                        "finish_reason": "stop",
-                    }
-                ]
+                "text": "Hi there!",
+                "finish_reason": "stop",
             },
             "usage": {"input_tokens": 5, "output_tokens": 3},
-        }
+        }.get(key, default)
 
-        with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
-            mock_post.return_value = mock_response
+        with patch("dashscope.MultiModalConversation.call") as mock_call:
+            mock_call.return_value = mock_response
             result = await provider.call(messages)
 
         assert result.content == "Hi there!"
@@ -162,15 +138,15 @@ class TestDashscopeProvider:
 
         mock_response = MagicMock()
         mock_response.status_code = 401
-        mock_response.json.return_value = {
+        mock_response.get.side_effect = lambda key, default=None: {
             "message": "Unauthorized"
-        }
-        mock_response.headers = {"content-type": "application/json"}
+        }.get(key, default)
 
-        with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
-            mock_post.return_value = mock_response
+        with patch("dashscope.MultiModalConversation.call") as mock_call:
+            mock_call.return_value = mock_response
             with pytest.raises(RuntimeError, match="API error"):
                 await provider.call(messages)
+
 
 
 class TestOpenAIProvider:

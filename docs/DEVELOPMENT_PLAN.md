@@ -37,29 +37,115 @@
 
 ---
 
-### Phase 2: 核心智能模块 (待开始)
+### Phase 2: 核心智能模块 (进行中)
 
-#### 2.1 前额叶皮层 (Prefrontal Cortex) - 对话Agent
-**预期时间**: 2-3周
-**关键任务**:
-- [ ] 集成 Qwen-VL-Plus API 客户端
-- [ ] 多模态输入处理 (文本+图像)
-- [ ] 意图识别与分类
-- [ ] 任务规划与分解
-- [ ] 上下文管理器
+#### 2.1 前额叶皮层 (Prefrontal Cortex) - 对话Agent ✅ 完成
+**实际时间**: 1天 (2026.03.31)
+**关键成果**:
+- ✅ 多提供商 LLM 客户端 (DashScope, OpenAI, vLLM, 自定义)
+- ✅ 多模态输入处理 (文本+图像, base64 编码)
+- ✅ 意图识别与分类 (JSON 解析 + 启发式降级)
+- ✅ 任务规划与分解 (动作感知的子任务生成)
+- ✅ 上下文管理器 (有界历史, 导出支持)
+- ✅ 完整的单元测试 (27/27 通过, 67% 覆盖)
 
-**关键接口**:
-```python
-class PrefrontalCortex:
-    async def process_input(text: str, image: Optional[Image]) -> IntentResult
-    async def decompose_task(intent: Intent) -> List[Subtask]
-    def maintain_context(conversation_history)
+**实现细节**:
+```
+openerb/llm/
+  ├── base.py (Message, LLMResponse, LLMProvider 抽象)
+  ├── client.py (工厂模式提供商选择)
+  ├── config.py (环境变量配置管理)
+  └── providers/
+      ├── dashscope.py (阿里 Qwen API, 重试机制)
+      └── openai_compat.py (OpenAI & vLLM 兼容)
+
+openerb/modules/prefrontal_cortex/
+  ├── cortex.py (主入口, 多模态处理)
+  ├── intent_parser.py (LLM→Intent 转换)
+  ├── task_decomposer.py (Intent→Subtask 分解)
+  └── context_manager.py (会话历史管理)
 ```
 
-**单元测试**:
-- 测试意图识别准确性
-- 测试任务分解逻辑
-- 测试多模态输入处理
+**测试覆盖**:
+- LLM 提供商: 21/21 通过 (DashScope 11, OpenAI 10)
+- PrefrontalCortex 组件: 27/27 通过
+  - IntentParser: 7 测试 (JSON 解析, 降级, 验证)
+  - TaskDecomposer: 6 测试 (动作分解, 依赖关系)
+  - ContextManager: 8 测试 (历史, 边界, 导出)
+  - PrefrontalCortex: 6 测试 (初始化, 处理)
+- 总覆盖率: 72% (1039 行代码)
+
+**API 示例**:
+```python
+import asyncio
+from openerb.llm.config import LLMConfig
+from openerb.modules.prefrontal_cortex import PrefrontalCortex
+from openerb.core.types import UserProfile
+
+async def main():
+    # 使用环境变量配置 LLM (支持 DashScope, OpenAI, vLLM 等)
+    # 环境变量: LLM_PROVIDER=dashscope, LLM_API_KEY=xxx, LLM_MODEL=qwen-vl-plus
+    client = LLMConfig.create_client()
+    cortex = PrefrontalCortex(llm_client=client, max_conversation_history=20)
+
+    # 1. 处理纯文本输入
+    result = await cortex.process_input(
+        text="让机器人向前走一步",
+        user=UserProfile(name="Alice")
+    )
+    
+    # 获取识别的意图
+    print(f"识别到 {len(result.intents)} 个意图")
+    print(f"整体置信度: {result.confidence:.2f}")
+    
+    for intent in result.intents:
+        print(f"  动作: {intent.action}")
+        print(f"  参数: {intent.parameters}")
+        print(f"  置信度: {intent.confidence}")
+    
+    # 2. 处理多模态输入 (文本 + 图像)
+    with open("robot_view.png", "rb") as f:
+        image_bytes = f.read()
+    
+    result = await cortex.process_input(
+        text="抓住红色的立方体",
+        image=image_bytes,  # bytes 格式
+        user=UserProfile(name="Bob")
+    )
+    
+    # 3. 访问对话历史和上下文
+    history = cortex.context.get_history(last_n=5)
+    print(f"对话历史: {len(history)} 轮")
+    
+    # 4. 导出对话记录 (JSON 或文本格式)
+    context_json = cortex.context.export_history(format="json")
+    context_text = cortex.context.export_history(format="text")
+    
+    # 5. 清空历史 (如需)
+    cortex.context.clear_history()
+
+# 运行示例
+asyncio.run(main())
+```
+
+**配置说明**:
+```bash
+# 使用 DashScope (阿里 Qwen)
+export LLM_PROVIDER=dashscope
+export LLM_API_KEY="sk-xxxxxxx"
+export LLM_MODEL=qwen-vl-plus
+
+# 或使用 OpenAI
+export LLM_PROVIDER=openai
+export LLM_API_KEY="sk-xxxxxxx"
+export LLM_MODEL=gpt-4-vision
+
+# 或使用本地 vLLM
+export LLM_PROVIDER=openai
+export LLM_API_KEY=none
+export LLM_MODEL=qwen-vl-plus
+export LLM_API_BASE=http://localhost:8000/v1
+```
 
 ---
 
@@ -224,14 +310,21 @@ class Hippocampus:
 - 41 个单元测试 (95% 总覆盖率)
 - 标准项目结构 (非扁平化)
 
-🚀 **Milestone 2: 即将启动** - Phase 2 核心模块开发
+✅ **Milestone 2: Prefrontal Cortex 实现完成** (完成 100% - 2026.03.31)
+- 多提供商 LLM 客户端 (DashScope, OpenAI, vLLM)
+- LLM 单元测试: 21/21 通过 (100% 通过率)
+- 前额叶皮层核心模块 5 个
+- PrefrontalCortex 单元测试: 27/27 通过 (100% 通过率)
+- 总测试: 48/48 通过
+- 代码覆盖率: 72% (1039 行)
+
+🚀 **Milestone 3: 即将启动** - Phase 2.2+ 继续开发
 
 下一步优先级: 
-1. Prefrontal Cortex (前额叶皮层) - 用户交互入口
-2. Insular Cortex (岛叶皮层) - 机器人识别
-3. Cerebellum (小脑) - 技能库管理
-4. Limbic System (边缘系统) - 安全评估
-5. Motor Cortex (运动皮层) - 代码生成
+1. Insular Cortex (岛叶皮层) - 机器人识别
+2. Cerebellum (小脑) - 技能库管理
+3. Limbic System (边缘系统) - 安全评估
+4. Motor Cortex (运动皮层) - 代码生成
 
 ---
 
