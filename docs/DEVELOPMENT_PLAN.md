@@ -40,14 +40,16 @@
 ### Phase 2: 核心智能模块 (进行中)
 
 #### 2.1 前额叶皮层 (Prefrontal Cortex) - 对话Agent ✅ 完成
-**实际时间**: 1天 (2026.03.31)
+**实际时间**: 2天 (2026.03.31 - 2026.04.01)
 **关键成果**:
 - ✅ 多提供商 LLM 客户端 (DashScope, OpenAI, vLLM, 自定义)
-- ✅ 多模态输入处理 (文本+图像, base64 编码)
+- ✅ 官方 DashScope SDK 集成 (从 httpx 重构，简化 40%)
+- ✅ 多模态输入处理 (文本+图像，使用厨房图像验证)
 - ✅ 意图识别与分类 (JSON 解析 + 启发式降级)
 - ✅ 任务规划与分解 (动作感知的子任务生成)
 - ✅ 上下文管理器 (有界历史, 导出支持)
-- ✅ 完整的单元测试 (27/27 通过, 67% 覆盖)
+- ✅ 完整的单元测试 (87/87 通过，83% 代码覆盖)
+- ✅ End-to-end 测试验证 (文本和多模态工作流)
 
 **实现细节**:
 ```
@@ -56,24 +58,27 @@ openerb/llm/
   ├── client.py (工厂模式提供商选择)
   ├── config.py (环境变量配置管理)
   └── providers/
-      ├── dashscope.py (阿里 Qwen API, 重试机制)
-      └── openai_compat.py (OpenAI & vLLM 兼容)
+      ├── dashscope.py (阿里 Qwen API, 官方 SDK, 238 行)
+      └── openai_compat.py (OpenAI & vLLM 兼容, 96 行)
 
 openerb/modules/prefrontal_cortex/
   ├── cortex.py (主入口, 多模态处理)
-  ├── intent_parser.py (LLM→Intent 转换)
-  ├── task_decomposer.py (Intent→Subtask 分解)
-  └── context_manager.py (会话历史管理)
+  ├── intent_parser.py (LLM→Intent 转换, 77% 覆盖)
+  ├── task_decomposer.py (Intent→Subtask 分解, 91% 覆盖)
+  └── context_manager.py (会话历史管理, 62% 覆盖)
 ```
 
 **测试覆盖**:
-- LLM 提供商: 21/21 通过 (DashScope 11, OpenAI 10)
-- PrefrontalCortex 组件: 27/27 通过
+- 总计: 87/87 测试通过 ✅
+- DashScope 提供商: 9/9 通过 (官方 SDK 集成)
+- OpenAI 提供商: 10/10 通过
+- 其他核心: 41/41 通过
+- PrefrontalCortex 模块: 27/27 通过
   - IntentParser: 7 测试 (JSON 解析, 降级, 验证)
   - TaskDecomposer: 6 测试 (动作分解, 依赖关系)
   - ContextManager: 8 测试 (历史, 边界, 导出)
   - PrefrontalCortex: 6 测试 (初始化, 处理)
-- 总覆盖率: 72% (1039 行代码)
+- 整体代码覆盖率: 83% (1025 行代码)
 
 **API 示例**:
 ```python
@@ -114,7 +119,7 @@ async def main():
     )
     
     # 3. 访问对话历史和上下文
-    history = cortex.context.get_history(last_n=5)
+    history = cortex.conversation_turns
     print(f"对话历史: {len(history)} 轮")
     
     # 4. 导出对话记录 (JSON 或文本格式)
