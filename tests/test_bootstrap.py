@@ -4,8 +4,8 @@ Test bootstrap initialization system.
 
 import pytest
 from pathlib import Path
-from core.bootstrap import setup_system
-from core import get_storage_config
+from openerb.core.bootstrap import setup_system
+from openerb.core import get_storage_config
 
 
 class TestBootstrap:

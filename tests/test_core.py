@@ -4,7 +4,7 @@ Test core storage functionality.
 
 import pytest
 from datetime import datetime
-from core import (
+from openerb.core import (
     Skill, SkillStatus, SkillType, RobotType, UserProfile,
     Intent, Subtask, TaskStatus, SensorData, Action, SafetyAssessment,
     DangerLevel, ExecutionResult, ConversationTurn, RobotProfile,

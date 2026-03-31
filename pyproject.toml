@@ -62,11 +62,12 @@ Repository = "https://github.com/openerb/openerb.git"
 Documentation = "https://github.com/openerb/openerb/tree/main/docs"
 
 [tool.setuptools]
-py-modules = ["__main__"]
-packages = ["core", "modules"]
+py-modules = []
+packages = ["openerb", "openerb.core", "openerb.modules"]
+package-dir = {"" = "."}
 
 [tool.setuptools.package-data]
-core = ["py.typed"]
+openerb = ["py.typed"]
 
 [tool.black]
 line-length = 100

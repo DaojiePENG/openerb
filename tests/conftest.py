@@ -10,7 +10,7 @@ import sys
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core import (
+from openerb.core import (
     SystemConfig, APIConfig, RobotConfig, StorageConfig, LoggingConfig,
     set_config, set_storage, Storage,
     Skill, SkillStatus, SkillType, RobotProfile, RobotType, UserProfile

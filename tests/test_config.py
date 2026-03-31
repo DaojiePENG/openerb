@@ -4,7 +4,7 @@ Test configuration system.
 
 import pytest
 from pathlib import Path
-from core import (
+from openerb.core import (
     SystemConfig, APIConfig, RobotConfig, StorageConfig, LoggingConfig,
     set_config, get_config,
 )
