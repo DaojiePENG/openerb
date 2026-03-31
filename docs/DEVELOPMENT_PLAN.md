@@ -154,13 +154,144 @@ export LLM_API_BASE=http://localhost:8000/v1
 
 ---
 
-#### 2.2 岛叶皮层 (Insular Cortex) - 机体自我认知
-**预期时间**: 1-2周
+#### 2.2 岛叶皮层 (Insular Cortex) - 机体自我认知 ✅ 完成
+**实际时间**: 1天 (2026.04.01)
+**关键成果**:
+- ✅ 机器人型号识别 (G1, Go2, Go1，支持别名)
+- ✅ 机器人特性数据库维护 (4+ 类别，20+ 能力)
+- ✅ 能力集合映射 (硬件到软件能力的映射)
+- ✅ 技能分类 (通用 vs 本体特定，兼容性检查)
+- ✅ 完整的单元测试 (50/50 通过，88-96% 覆盖)
+
+**实现细节**:
+```
+openerb/modules/insular_cortex/
+  ├── cortex.py (主入口, API 集成)
+  ├── body_detector.py (机器人识别, 固件验证)
+  ├── capability_mapper.py (能力数据库, 查询接口)
+  └── skill_classifier.py (兼容性检查, 适配建议)
+```
+
+**核心功能**:
+1. **BodyDetector** - 机器人识别与特征提取
+   - 支持型号: G1-EDU (26 DOF, 人型, 有夹爪)
+   - 支持型号: Go2 (12 DOF, 四足, 无夹爪)
+   - 支持型号: Go1 (12 DOF, 四足, 无夹爪)
+   - 固件版本兼容性检查
+   - 能力查询 (DOF, 人型检查, 夹爪检查)
+
+2. **CapabilityMapper** - 能力集合映射
+   - 运动能力: walk, run, jump, crouch, trot, balance, turn, side_step
+   - 操纵能力: grasp, pinch, push, pull, rotate, fine_manipulation
+   - 感知能力: camera, lidar, imu, joint_sensors, force_sensing
+   - 通信能力: wifi, bluetooth, network
+   - 计算能力: on_board_compute, power_limits
+   - 能力过滤与比较接口
+
+3. **SkillClassifier** - 技能分类与兼容性
+   - 通用技能检测 (learning, memory, execution)
+   - 能力需求自动提取
+   - 兼容性验证与缺失能力识别
+   - 适配建议生成
+   - 多机器人兼容性查询
+
+4. **InsularCortex** - 统一 API
+   - 机器人识别与档案获取
+   - 能力查询与比较
+   - 技能兼容性检查
+   - 与 PrefrontalCortex 集成用于技能选择
+
+**测试覆盖**:
+- 总计: 50/50 新增测试通过 ✅
+- TestBodyDetector: 13 tests
+  - 机器人识别 (4 tests)
+  - 档案获取 (4 tests)  
+  - 固件验证 (3 tests)
+  - 能力检查 (2 tests)
+- TestCapabilityMapper: 12 tests
+  - 能力获取 (3 tests)
+  - 能力检查 (3 tests)
+  - 能力对比 (2 tests)
+  - 机器人过滤 (2 tests)
+  - 未知类型处理 (2 tests)
+- TestSkillClassifier: 11 tests
+  - 技能分类 (2 tests)
+  - 兼容性检查 (4 tests)
+  - 适配建议 (2 tests)
+  - 错误处理 (3 tests)
+- TestInsularCortex: 14 tests
+  - 初始化 (3 tests)
+  - 机器人识别 (2 tests)
+  - 能力查询 (6 tests)
+  - 技能检查 (3 tests)
+- 代码覆盖率: 83% 总体，88-96% 模块级
+
+**API 示例**:
+```python
+from openerb.modules.insular_cortex import InsularCortex
+from openerb.core.types import RobotType, Skill
+
+# 初始化并识别机器人
+cortex = InsularCortex()
+cortex.identify_robot("G1-EDU", firmware_version="1.5.0")
+
+# 获取机器人信息
+robot_type = cortex.get_robot_type()  # RobotType.G1
+profile = cortex.get_robot_profile()  # {'dof': 26, 'has_gripper': True, ...}
+is_humanoid = cortex.is_humanoid()    # True
+
+# 查询能力
+capabilities = cortex.get_capabilities()
+has_gripper = cortex.has_capability("grasp")
+enabled_caps = cortex.get_enabled_capabilities(category="movement")
+
+# 检查技能兼容性
+skill = Skill(name="grasp_object", ...)
+is_compatible = cortex.can_run_skill(skill)
+if not is_compatible:
+    suggestion = cortex.get_adaptation_suggestion(skill)
+    print(f"建议: {suggestion}")
+
+# 与其他机器人比较
+comparison = cortex.compare_with_robot(RobotType.GO2)
+print(f"共享能力: {comparison['shared']}")
+print(f"G1 独有: {comparison['only_in_first']}")
+```
+
+**关键接口**:
+```python
+class InsularCortex:
+    def identify_robot(model_name: str, firmware_version: str = None) -> RobotType
+    def get_robot_type() -> RobotType
+    def get_robot_profile() -> Dict
+    def get_capabilities(category: str = None) -> Dict
+    def has_capability(capability_name: str) -> bool
+    def can_run_skill(skill: Skill) -> bool
+    def classify_skill(skill: Skill) -> SkillType
+    def get_adaptation_suggestion(skill: Skill) -> str
+    def compare_with_robot(other_robot: RobotType) -> Dict
+```
+
+**与 PrefrontalCortex 的集成**:
+```python
+# 前额叶皮层识别意图
+intent = await prefrontal_cortex.process_input("抓住红色物体")
+
+# 岛叶皮层检查兼容性
+if not insular_cortex.can_run_skill(intent.skills[0]):
+    # 寻找替代能力或建议适配
+    pass
+```
+
+---
+
+#### 2.3 边缘系统・杏仁核 (Limbic System & Amygdala) - 安全约束
+**预期时间**: 2周
 **关键任务**:
-- [ ] 机器人型号识别 (G1/Go2/其他)
-- [ ] 机器人特性数据库维护
-- [ ] 能力集合映射
-- [ ] 技能分类 (通用 vs 本体特定)
+- [ ] 动作安全评估
+- [ ] 障碍物检测与规避
+- [ ] 危险等级判定 (GREEN/YELLOW/RED)
+- [ ] 二次确认机制
 
 **关键接口**:
 ```python
@@ -168,7 +299,7 @@ class InsularCortex:
     def identify_robot_body() -> RobotType
     def get_robot_capabilities() -> RobotCapabilities
     def classify_skill(skill: Skill) -> SkillType
-```
+
 
 **单元测试**:
 - 测试多种机器人的识别
