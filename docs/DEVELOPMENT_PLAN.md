@@ -663,37 +663,164 @@ if insular_cortex.can_run_skill(intent.skills[0]):
 
 ### Phase 3: 智能代码生成与执行 (待开始)
 
-#### 3.1 运动皮层 (Motor Cortex) - 代码生成
-**预期时间**: 3-4周
-**关键任务**:
-- [ ] 意图到代码的转换引擎
-- [ ] 代码模板库建立
-- [ ] Unitree SDK 集成与调用生成
-- [ ] 代码安全审查 (AST 分析)
-- [ ] 动态编译与执行
+#### 3.1 运动皮层 (Motor Cortex) - 代码生成 ✅ 完成
+**实际时间**: 完成 (2026.04.01)
+**完成状态**:
+- ✅ 意图到代码的转换引擎
+- ✅ 代码模板库建立
+- ✅ Unitree SDK 完整集成
+- ✅ AST-基础代码安全审查
+- ✅ 沙箱动态代码执行
+
+**实现细节** (7核心模块, ~2,200行):
+```
+openerb/modules/motor_cortex/
+  ├── code_template_library.py (373行)
+  ├── unitree_sdk_adapter.py (361行)
+  ├── code_validator.py (408行)
+  ├── code_executor.py (361行)
+  ├── code_generator.py (395行)
+  ├── motor_cortex.py (388行)
+  └── __init__.py (exports)
+```
+
+**1. CodeTemplateLibrary** - 预定义技能模板
+- 5个开箱即用的模板: move_forward, rotate, grasp_object, release_object, detect_objects
+- 按类别/机器人类型过滤
+- 模板注册与发现API
+- 完整的元数据和示例
+
+**2. UnitreeSDKAdapter** - Unitree机器人SDK统一接口
+- MotionController: 前进、后退、旋转、站立、坐下
+- ManipulationController: 夹爪控制（带力度控制）、释放
+- VisionController: 物体检测、人员追踪
+- SensorController: 电池电量、IMU、脚力传感器
+- 完整仿真支持
+
+**3. CodeValidator** - AST-基础代码验证与安全检查
+- 语法检查与错误报告
+- 禁用操作检测（os, sys, subprocess, __import__, exec等）
+- 导入白名单检查
+- 代码复杂度分析与指标
+- 3种访问器模式: SecurityVisitor, MetricsVisitor, ComplexityVisitor
+
+**4. CodeExecutor** - 沙箱执行引擎
+- 多种沙箱模式（直接、受限、超时隔离）
+- 输出和错误捕获
+- 执行需求估算
+- 代码预览而无需执行
+- 流式输出回调支持
+
+**5. CodeGenerator** - Intent → Code转换
+- 模板-基础生成（优先）
+- LLM-基础生成（后备）
+- 参数占位符填充
+- LLM响应代码提取
+- 生成历史追踪
+
+**6. MotorCortex** - 主API编排器
+```python
+class MotorCortex:
+    async def process_intent(intent: Intent) -> Dict  # 完整流程
+    async def generate_skill(intent: Intent) -> Skill  # 生成可重用技能
+    def validate_code(code: str) -> ValidationResult
+    def execute_code(code: str) -> ExecutionResult
+    def get_templates(category: str = None) -> List[CodeTemplate]
+    def search_templates(query: str) -> List[CodeTemplate]
+    def get_execution_history(action: str = None) -> List[Dict]
+    async def update_execution_policy(policy: CodeExecutionPolicy)
+```
 
 **核心流程**:
 ```
-Intent → 查询技能库 
-       → 有则使用现有技能
-       → 无则调用 LLM 生成代码
-       → 代码审查 & 安全检测
-       → 执行
-       → 记录结果
+Intent 
+  ↓
+CodeGenerator (模板优先, LLM后备)
+  ↓
+CodeValidator (AST + 安全检查)
+  ↓
+CodeExecutor (沙箱执行)
+  ↓
+结果记录 & 技能库更新
 ```
+
+**测试覆盖** (44/44通过, 100%):
+- TestCodeTemplateLibrary: 7 tests
+- TestCodeValidator: 7 tests  
+- TestCodeExecutor: 7 tests
+- TestUnitreeSDKAdapter: 5 tests
+- TestCodeGenerator: 4 tests
+- TestMotorCortex: 8 tests
+- TestMotorCortexIntegration: 6 tests
 
 **关键接口**:
 ```python
 class MotorCortex:
-    async def generate_code(intent: Intent, context: RobotContext) -> str
-    async def validate_code(code: str) -> (bool, str)
-    async def execute_code(code: str, timeout: float) -> ExecutionResult
+    async def process_intent(intent: Intent, robot_context: Optional[RobotContext]) -> Dict
+    async def generate_skill(intent: Intent, description: str) -> Optional[Skill]
+    def validate_code(code: str) -> ValidationResult
+    def execute_code(code: str, globals_dict: Optional[Dict]) -> ExecutionResult
+    def execute_skill(skill: Skill, parameters: Optional[Dict]) -> ExecutionResult
+    def get_template(template_id: str) -> Optional[CodeTemplate]
+    def list_templates(category: str = None, robot_type: RobotType = None) -> List[CodeTemplate]
+    def search_templates(query: str) -> List[CodeTemplate]
+    def get_execution_history(action: str = None, limit: int = 10) -> List[Dict]
+    def get_system_stats() -> Dict[str, Any]
 ```
 
-**单元测试**:
-- 测试代码生成的可执行性
-- 测试安全检测的有效性
-- 集成测试：模拟机器人指令执行
+**主要特性**:
+✅ 意图驱动的代码生成
+✅ 模板-基础 + LLM-基础混合方法
+✅ AST-基础的全面安全分析
+✅ 禁用操作检测（os, subprocess等）
+✅ 代码复杂度和执行需求估算
+✅ 沙箱隔离执行
+✅ 完整Unitree SDK仿真
+✅ 动态技能生成
+✅ 执行历史追踪
+✅ 扩展性安全策略管理
+
+**API示例**:
+```python
+# 初始化
+motor_cortex = MotorCortex(robot_type=RobotType.G1, simulation_mode=True)
+
+# 处理意图
+intent = Intent(
+    raw_text="Move the robot forward",
+    action="move forward",
+    parameters={"distance": 1.0, "speed": 0.5},
+    confidence=0.9
+)
+result = await motor_cortex.process_intent(intent)
+
+# 验证代码
+code = "print('hello')"
+validation = motor_cortex.validate_code(code)
+if validation.valid:
+    execution = motor_cortex.execute_code(code)
+
+# 生成技能
+skill = await motor_cortex.generate_skill(intent, "Forward movement skill")
+
+# 执行技能
+execution_result = motor_cortex.execute_skill(skill, {"distance": 2.0})
+
+# 发现模板
+templates = motor_cortex.search_templates("move")
+for template in templates:
+    print(f"{template.name}: {template.description}")
+
+# 系统统计
+stats = motor_cortex.get_system_stats()
+print(f"已执行: {stats['executions']['total']}")
+```
+
+**项目影响**:
+- ✅ 240/240 测试通过 (196 existing + 44 new)
+- ✅ 77% 覆盖率
+- ✅ 与已有的系统完全集成
+- ✅ 为 Phase 3.2 长期记忆(Hippocampus)做好准备
 
 ---
 
