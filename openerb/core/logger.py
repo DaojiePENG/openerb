@@ -44,4 +44,12 @@ def setup_logger():
 logger = setup_logger()
 
 
-__all__ = ["logger", "setup_logger"]
+def get_logger(name: str = None):
+    """Get a logger instance (with optional name/module)."""
+    # loguru creates separate contexts per name automatically
+    if name:
+        return _logger.bind(name=name)
+    return logger
+
+
+__all__ = ["logger", "setup_logger", "get_logger"]

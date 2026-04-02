@@ -294,3 +294,136 @@ class SceneInfo:
     layout_description: str
     confidence: float
     timestamp: datetime = field(default_factory=datetime.now)
+
+
+# ============================================================================
+# Visual Cortex Types - Phase 4.1
+# ============================================================================
+
+class ImageFormat(str, Enum):
+    """Supported image formats."""
+    RGB = "rgb"
+    BGR = "bgr"
+    RGBA = "rgba"
+    GRAYSCALE = "grayscale"
+
+
+class ObjectCategory(str, Enum):
+    """Common object categories for detection."""
+    PERSON = "person"
+    ROBOT = "robot"
+    OBSTACLE = "obstacle"
+    TOOL = "tool"
+    FURNITURE = "furniture"
+    UNKNOWN = "unknown"
+
+
+class FaceAttribute(str, Enum):
+    """Recognized face attributes."""
+    GENDER = "gender"
+    AGE_GROUP = "age_group"
+    EMOTION = "emotion"
+    POSE = "pose"
+
+
+@dataclass
+class BoundingBox:
+    """Bounding box for object detection."""
+    x: float  # Top-left x coordinate (0-1, normalized)
+    y: float  # Top-left y coordinate (0-1, normalized)
+    width: float  # Width (0-1, normalized)
+    height: float  # Height (0-1, normalized)
+    confidence: float  # Detection confidence (0-1)
+    
+    def to_pixels(self, image_width: int, image_height: int) -> Dict[str, int]:
+        """Convert normalized coordinates to pixel coordinates."""
+        return {
+            "x": int(self.x * image_width),
+            "y": int(self.y * image_height),
+            "width": int(self.width * image_width),
+            "height": int(self.height * image_height),
+        }
+
+
+@dataclass
+class DetectedObject:
+    """Detected object in an image."""
+    object_id: str = field(default_factory=lambda: str(uuid4()))
+    category: ObjectCategory = ObjectCategory.UNKNOWN
+    label: str = ""  # Specific object name
+    bbox: Optional[BoundingBox] = None
+    confidence: float = 0.0
+    color: Optional[str] = None
+    features: Dict[str, Any] = field(default_factory=dict)  # Color, texture, etc.
+    embedding: Optional[List[float]] = None  # Feature vector for similarity
+    timestamp: datetime = field(default_factory=datetime.now)
+
+
+@dataclass
+class FaceDetection:
+    """Detected face in an image."""
+    face_id: str = field(default_factory=lambda: str(uuid4()))
+    bbox: Optional[BoundingBox] = None
+    face_embedding: Optional[List[float]] = None  # 128-D or 256-D encoding
+    confidence: float = 0.0
+    attributes: Dict[FaceAttribute, Any] = field(default_factory=dict)
+    identified_user: Optional[UserProfile] = None  # If recognized
+    identification_confidence: float = 0.0
+    landmarks: Dict[str, tuple] = field(default_factory=dict)  # Facial landmarks
+    timestamp: datetime = field(default_factory=datetime.now)
+
+
+@dataclass
+class ImageAnnotation:
+    """Annotated image with detected objects and faces."""
+    image_id: str = field(default_factory=lambda: str(uuid4()))
+    image_bytes: Optional[bytes] = None  # Original image data
+    image_width: int = 0
+    image_height: int = 0
+    format: ImageFormat = ImageFormat.RGB
+    
+    # Detection results
+    objects: List[DetectedObject] = field(default_factory=list)
+    faces: List[FaceDetection] = field(default_factory=list)
+    
+    # High-level understanding
+    scene_description: str = ""
+    main_objects: List[str] = field(default_factory=list)
+    spatial_layout: str = ""
+    
+    # Processing metadata
+    processing_time: float = 0.0  # ms
+    timestamp: datetime = field(default_factory=datetime.now)
+
+
+@dataclass
+class Relationship:
+    """Spatial relationship between two objects."""
+    object1_id: str
+    object2_id: str
+    relation_type: str  # "left_of", "above", "near", "behind", etc.
+    distance: float = 0.0  # Estimated distance (meters)
+    confidence: float = 0.0
+
+
+@dataclass
+class SpatialLayout:
+    """Spatial understanding of the scene."""
+    layout_id: str = field(default_factory=lambda: str(uuid4()))
+    objects: List[DetectedObject] = field(default_factory=list)
+    relationships: List[Relationship] = field(default_factory=list)
+    estimated_distances: Dict[str, float] = field(default_factory=dict)  # object_id -> distance
+    depth_map: Optional[List[List[float]]] = None  # Depth estimation
+    robot_position: Optional[tuple] = None  # (x, y, z) in scene coordinates
+    timestamp: datetime = field(default_factory=datetime.now)
+
+
+@dataclass
+class VisualAnalysisResult:
+    """Complete result of visual analysis."""
+    annotation: ImageAnnotation
+    spatial_layout: Optional[SpatialLayout] = None
+    recognized_users: List[UserProfile] = field(default_factory=list)
+    analysis_confidence: float = 0.0
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    timestamp: datetime = field(default_factory=datetime.now)
