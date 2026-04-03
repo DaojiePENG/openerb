@@ -9,11 +9,15 @@ OpenERB Chat Interface 是一个交互式聊天窗口，让您在没有物理机
 ### 启动聊天界面
 
 ```bash
-# 方式1：直接使用python
+# 方式1：直接使用python（推荐）
 python scripts/chat.py
 
-# 方式2：使用uv（推荐）
-uv pip run python scripts/chat.py
+# 方式2：使用uv run
+uv run python scripts/chat.py
+
+# 确保虚拟环境激活且依赖已安装
+source .venv/bin/activate  # Linux/Mac
+pip install -e .            # 如果还未安装
 ```
 
 ### 基础命令

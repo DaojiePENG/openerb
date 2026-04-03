@@ -41,6 +41,7 @@ dependencies = [
     "click>=8.0.0",
     "pyyaml>=6.0",
     "aiohttp>=3.9.0",
+    "rich>=13.0.0",
 ]
 
 [project.optional-dependencies]
@@ -63,7 +64,13 @@ Documentation = "https://github.com/openerb/openerb/tree/main/docs"
 
 [tool.setuptools]
 py-modules = []
-packages = ["openerb", "openerb.core", "openerb.modules"]
+packages = [
+    "openerb",
+    "openerb.core",
+    "openerb.modules",
+    "openerb.interface",
+    "openerb.llm",
+]
 package-dir = {"" = "."}
 
 [tool.setuptools.package-data]
