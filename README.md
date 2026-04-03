@@ -13,6 +13,9 @@
 | [PHASE1_COMPLETE.md](PHASE1_COMPLETE.md) | Phase 1 交付总结 | 项目经理 |
 | [docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md) | 完整系统设计 + 安全架构 | 架构师/开发者 |
 | [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) | 5 阶段开发路线图 | 项目规划 |
+| [docs/API_REFERENCE.md](docs/API_REFERENCE.md) | 完整 API 文档 | 开发者 |
+| [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) | 部署和运维指南 | 运维工程师 |
+| [docs/PERFORMANCE_GUIDE.md](docs/PERFORMANCE_GUIDE.md) | 性能优化指南 | 性能工程师 |
 | [docs/SAFETY_SANDBOX_GUIDE.md](docs/SAFETY_SANDBOX_GUIDE.md) | 沙盒执行实现指南 | 后端开发者 |
 
 

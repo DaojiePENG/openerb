@@ -433,6 +433,11 @@ return result
         results = []
         
         for template in self.templates.values():
+            # Match in template_id
+            if query_lower in template.template_id.lower():
+                results.append(template)
+                continue
+            
             # Match in name
             if query_lower in template.name.lower():
                 results.append(template)

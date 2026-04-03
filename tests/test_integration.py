@@ -7,8 +7,10 @@ import pytest
 from openerb.core.types import (
     CommunicationNode,
     ExperienceReport,
+    Intent,
     RobotType,
     Skill,
+    UserProfile,
 )
 from openerb.modules.communication import CommunicationModule
 from openerb.modules.cerebellum import Cerebellum
@@ -145,3 +147,44 @@ def test_communication_node_lifecycle_and_discovery_with_policy():
     policy = comm.policy
     assert RobotType.G1 in policy.allowed_robot_types
     assert policy.max_concurrent_transfers >= 1
+
+
+@pytest.mark.asyncio
+async def test_integration_engine_end_to_end_execution_and_sharing():
+    """IntegrationEngine should generate a skill, save to cerebellum, record in hippocampus, and share via communication."""
+    from openerb.modules.system_integration import IntegrationEngine
+
+    engine = IntegrationEngine()
+
+    # Add a peer node to communicate with
+    peer = CommunicationNode(node_id="peer_1", robot_type=RobotType.GO2, address="10.2.2.2")
+    engine.communication.register_node(peer)
+
+    # Collect shared messages
+    received = []
+
+    def peer_handler(message):
+        received.append(message)
+
+    engine.communication.register_message_handler(peer.node_id, peer_handler)
+
+    intent = Intent(
+        raw_text="Move forward quickly",
+        action="move_forward",
+        parameters={"distance": 0.5, "speed": 0.5},
+        confidence=0.9,
+    )
+
+    user = UserProfile(user_id="user_100", name="TestUser")
+    result = await engine.execute_intent(intent, user, RobotType.GO2)
+
+    assert result["intent"] == "move_forward"
+    assert result["skill"] is not None
+    assert result["from_existing"] is False
+
+    # Because peer is GO2 and we run route in GO2, share should take place
+    assert len(received) == 1
+
+    aggregated = engine.communication.get_skill_learnings(result["skill"]["skill_id"])
+    assert aggregated["sample_size"] == 0
+
