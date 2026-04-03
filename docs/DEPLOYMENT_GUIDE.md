@@ -17,6 +17,97 @@
 - **Python**: 3.9 - 3.11
 - **机器人**: Unitree G1, Go2, 或 Go1
 
+## 开发环境设置
+
+### 推荐方案: 使用 uv (比 pip 快 10-100 倍)
+
+`uv` 是用 Rust 编写的超快 Python 包管理工具，推荐用于开发和测试。
+
+```bash
+# 1. 安装 uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# 或 macOS: brew install uv
+# 或 Ubuntu: apt install uv (需要添加 PPA)
+
+# 2. 创建虚拟环境（极速）
+cd ~/openerb
+uv venv --python 3.11
+
+# 3. 激活虚拟环境
+source .venv/bin/activate  # Linux/Mac
+# 或 .venv\Scripts\activate  # Windows
+
+# 4. 配置 API 密钥
+export DASHSCOPE_API_KEY="sk-your-key-here"
+
+# 5. 安装依赖（极速）
+uv pip install -e .
+
+# 6. 初始化系统
+python -m openerb.core.bootstrap init --robot-type G1
+
+# 7. 验证安装
+python -m pytest tests/
+```
+
+### 传统方案: 使用 pip
+
+如果你还没有 `uv`，可以使用传统的 pip：
+
+```bash
+# 1. 创建虚拟环境
+cd ~/openerb
+python -m venv venv
+
+# 2. 激活虚拟环境
+source venv/bin/activate  # Linux/Mac
+# 或 venv\Scripts\activate  # Windows
+
+# 3. 升级 pip
+pip install --upgrade pip setuptools
+
+# 4. 配置 API 密钥
+export DASHSCOPE_API_KEY="sk-your-key-here"
+
+# 5. 安装依赖
+pip install -e .
+
+# 6. 初始化系统（G1 机器人）
+python -m openerb.core.bootstrap init --robot-type G1
+
+# 或 Go2
+python -m openerb.core.bootstrap init --robot-type Go2
+```
+
+### Docker 沙盒执行环境
+
+为了安全执行 AI 生成的代码，推荐使用 Docker 容器隔离：
+
+```bash
+# 1. 构建 Docker 镜像
+docker build -t openerb:latest .
+
+# 2. 运行容器
+docker run -it \
+  -e DASHSCOPE_API_KEY="sk-your-key" \
+  -e ROBOT_TYPE="G1" \
+  -v ~/openerb/data:/app/data \
+  openerb:latest
+
+# 3. 在容器内验证安装
+python -m pytest tests/
+```
+
+### 验证安装
+
+```bash
+# 检查系统状态
+python -m openerb.core.bootstrap status
+
+# 运行测试
+pytest tests/ -v
+```
+
 ## 快速部署
 
 ### 1. 环境准备

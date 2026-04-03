@@ -9,9 +9,7 @@
 | 文档 | 用途 | 用户 |
 |------|------|------|
 | [README.md](README.md) | 项目概览 | 所有人 |
-| [QUICK_START.md](QUICK_START.md) | 3 分钟快速开始 | 新用户 |
 | **[QUICK_START_DEPLOYMENT.md](docs/QUICK_START_DEPLOYMENT.md)** | **30 分钟真机部署** | **机器人用户** |
-| **[ROBOT_DEPLOYMENT_DEBUG.md](docs/ROBOT_DEPLOYMENT_DEBUG.md)** | **真机部署调试指南** | **开发者/调试人员** |
 | **[SYSTEM_FAMILIARIZATION.md](docs/SYSTEM_FAMILIARIZATION.md)** | **系统功能熟悉指南** | **开发者/用户** |
 | [PHASE1_COMPLETE.md](PHASE1_COMPLETE.md) | Phase 1 交付总结 | 项目经理 |
 | [docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md) | 完整系统设计 + 安全架构 | 架构师/开发者 |
@@ -31,31 +29,27 @@
 
 ### 安装
 
-使用 **uv** (推荐):
 ```bash
-# 使用 uv 创建虚拟环境 (比 venv 快得多)
-uv venv --python 3.11
-source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+# 1. 克隆项目
+git clone https://github.com/DaojiePENG/openerb.git
+cd openerb
 
-# 安装依赖
+# 2. 安装依赖 (推荐使用 uv)
+uv venv --python 3.11 && source .venv/bin/activate
 uv pip install -e .
-```
 
-或使用传统 pip:
-```bash
-# 1. 配置环境变量
-export DASHSCOPE_API_KEY="sk-xxx"
-
-# 2. 创建虚拟环境
-python -m venv venv
-source venv/activate
-
-# 3. 安装依赖
+# 或使用 pip
+python -m venv venv && source venv/bin/activate
 pip install -e .
+
+# 3. 配置 API 密钥
+export DASHSCOPE_API_KEY="sk-your-key"
 
 # 4. 初始化系统
 python -m openerb.core.bootstrap init --robot-type G1
 ```
+
+📖 **详细安装指南**: [部署指南](docs/DEPLOYMENT_GUIDE.md)
 
 ### 🚀 真机部署快速开始
 
@@ -91,7 +85,7 @@ result = await engine.execute_intent(intent, user, "G1")
 print(f"执行结果: {result['status']}")
 ```
 
-📖 **详细指南**: [30 分钟真机部署](docs/QUICK_START_DEPLOYMENT.md) | [部署调试指南](docs/ROBOT_DEPLOYMENT_DEBUG.md) | [系统功能熟悉](docs/SYSTEM_FAMILIARIZATION.md)
+📖 **详细指南**: [30 分钟真机部署](docs/QUICK_START_DEPLOYMENT.md) | [系统功能熟悉](docs/SYSTEM_FAMILIARIZATION.md) | [API 文档](docs/API_REFERENCE.md)
 
 ### 启动对话Agent
 
