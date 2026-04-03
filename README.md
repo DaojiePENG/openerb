@@ -9,11 +9,10 @@
 | 文档 | 用途 | 用户 |
 |------|------|------|
 | [README.md](README.md) | 项目概览 | 所有人 |
-| **[QUICK_START_DEPLOYMENT.md](docs/QUICK_START_DEPLOYMENT.md)** | **30 分钟真机部署** | **机器人用户** |
-| **[SYSTEM_FAMILIARIZATION.md](docs/SYSTEM_FAMILIARIZATION.md)** | **系统功能熟悉指南** | **开发者/用户** |
-| [PHASE1_COMPLETE.md](PHASE1_COMPLETE.md) | Phase 1 交付总结 | 项目经理 |
-| [docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md) | 完整系统设计 + 安全架构 | 架构师/开发者 |
-| [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) | 5 阶段开发路线图 | 项目规划 |
+| **[SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md)** | **完整系统设计 + 具身大脑设计理念** | **所有人** |
+| **[CHAT_INTERFACE_GUIDE.md](docs/CHAT_INTERFACE_GUIDE.md)** | **聊天交互与软技能调试（Phase 5.1）** | **所有用户** |
+| [SYSTEM_FAMILIARIZATION.md](docs/SYSTEM_FAMILIARIZATION.md) | 系统功能熟悉指南 | 开发者/用户 |
+| [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) | 开发路线图（Phase 5 已调整） | 项目规划 |
 | [docs/API_REFERENCE.md](docs/API_REFERENCE.md) | 完整 API 文档 | 开发者 |
 | [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) | 部署和运维指南 | 运维工程师 |
 | [docs/PERFORMANCE_GUIDE.md](docs/PERFORMANCE_GUIDE.md) | 性能优化指南 | 性能工程师 |
@@ -85,9 +84,31 @@ result = await engine.execute_intent(intent, user, "G1")
 print(f"执行结果: {result['status']}")
 ```
 
-📖 **详细指南**: [30 分钟真机部署](docs/QUICK_START_DEPLOYMENT.md) | [系统功能熟悉](docs/SYSTEM_FAMILIARIZATION.md) | [API 文档](docs/API_REFERENCE.md)
+📖 **详细指南**: [聊天交互指南](docs/CHAT_INTERFACE_GUIDE.md) | [系统功能熟悉](docs/SYSTEM_FAMILIARIZATION.md) | [API 文档](docs/API_REFERENCE.md)
 
-### 启动对话Agent
+### 启动聊天交互
+
+体验具身机器大脑的对话和学习能力，无需物理机器人：
+
+```bash
+# 启动聊天界面
+python scripts/chat.py
+
+# 或使用uv
+uv pip run python scripts/chat.py
+```
+
+在聊天中你可以：
+- 🗣️ 与机器人进行自然对话
+- 🧮 测试数学计算能力
+- 😄 听机器人讲笑话
+- ✍️ 看它写故事和诗歌
+- 🧠 教它记住信息
+- 📚 观察它的学习过程
+
+用 `help` 命令查看所有功能。
+
+### 启动主系统
 
 ```bash
 python -m openerb

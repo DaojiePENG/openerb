@@ -4,6 +4,235 @@
 
 本项目实现一个自主学习和进化的机器人控制系统，机器人能够基于人类指令自动生成控制代码、记忆技能、进行安全检验，并在不同机器人平台间迁移知识。该系统采用类脑结构设计，融合神经科学概念与工程实现。
 
+---
+
+## 🧠 具身机器大脑设计理念
+
+### 核心原则
+
+这个系统实现的是一个**具身机器大脑（Embodied Robot Brain）**，其核心原则是：
+
+> **大脑必须适应身体的能力和约束，而不是反过来。** 
+
+不是"一个聪明的大脑去适配不同的身体"，而是"一个大脑，根据自己的身体智能地调整行为"。
+
+### 为什么这个设计理念很重要？
+
+1. **现实主义**：当机器人说"我做不了"时，是因为它真的做不了，不是程序故障
+2. **可推广性**：同一个大脑可以控制不同配置的身体（G1、Go2、Go1）
+3. **安全性**：大脑永远不会要求身体去做危险的事或超出能力范围的事
+4. **用户友好**：用户知道机器人的真实能力，能形成正确的期望
+5. **学习效率**：机器人只学习在其自身能力范围内的技能
+
+### 四大设计原则
+
+#### 1. 能力感知 (Body Capability Awareness)
+
+大脑在启动时必须查询和识别身体的真实能力：
+
+```
+启动流程:
+  1. 连接机器人 → 自动检测硬件配置
+  2. 查询能力清单 → 摄像头？夹爪？DOF？麦克风？
+  3. 记录运动能力范围 → 最大速度、力度限制、续航时间
+  4. 向大脑报告能力清单 → 完整的能力配置文件
+```
+
+大脑在任何时刻都知道自己的身体能做什么、不能做什么。
+
+#### 2. 能力约束 (Capability Constraints)
+
+所有行为必须基于身体的实际能力，永远不会要求身体去做它不能做的事：
+
+```
+执行流程:
+  User: "抓住红色的立方体"
+  ├─ Brain 生成意图 → need_capability: ["gripper"]
+  ├─ Check body capabilities → has_gripper?
+  ├─ If YES → 执行抓取任务
+  └─ If NO → 拒绝 + 提供替代方案
+       "我没有夹爪，无法抓取。但我可以推动物体。你想要我怎么做？"
+```
+
+#### 3. 优雅降级 (Graceful Degradation)
+
+如果某些能力不可用，提供智能的替代方案而不是失败：
+
+```
+示例 1: 没有摄像头
+  User: "看看周围有什么"
+  ❌ Before: Error 404: Camera not found
+  ✅ After:  "我没有摄像头，看不了。能给我描述一下吗？
+             或者你可以给我上传一张照片我来分析。"
+
+示例 2: 没有夹爪
+  User: "帮我拿起这个杯子"
+  ❌ Before: Exception: Gripper not available
+  ✅ After:  "我没有夹爪，无法拿物体。但我可以推或拨动物体。
+             你想要我怎么做？"
+
+示例 3: LLM 不可用
+  ✅ Before: 优雅 fallback 到符号推理和模板匹配
+```
+
+#### 4. 能力通告 (Capability Declaration)
+
+在启动时向用户清晰地说明当前身体的能力和限制：
+
+```
+启动时输出:
+  "🤖 我是 Unitree G1-EDU 机器人
+   
+   📊 身体配置:
+   - 26 个自由度（人型双足机器人）
+   - 双夹爪（可精细操作，最大力度：XX N）
+   - 前置摄像头（分辨率：2K，30 FPS）
+   - IMU + 力传感器 + 接触传感器
+   
+   ✅ 我的能力:
+   - 走路/跑动/跳跃/蹲下/扭转
+   - 抓取/捏啮/旋转/精细操作
+   - 视觉感知/空间理解/人脸识别
+   - 自然语言理解/多轮对话
+   - 技能学习/持久化记忆
+   
+   ⚠️ 我的限制:
+   - 无法飞行或翻滚
+   - 无法举起超过 10kg 的物体
+   - 视觉范围：正前方 90° 以内
+   - 运动时间受电池限制（约 2 小时）
+   
+   当前电池电量: 85%"
+```
+
+### 系统架构中的体现
+
+#### PrefrontalCortex（前额叶皮层）- 智能决策
+
+```python
+async def process_input(text, user, vision=None):
+    # 1. 理解用户意图
+    intent = parse_intent(text)
+    
+    # 2. 查询身体能力清单 ← 关键步骤
+    body_capabilities = query_body_capabilities()
+    
+    # 3. 检查意图是否可行
+    if not can_execute(intent, body_capabilities):
+        return adaptive_response(intent, body_capabilities)
+    
+    # 4. 如果可行，生成行动计划
+    return generate_action_plan(intent)
+```
+
+#### VisualCortex（视觉皮层）- 条件化感知
+
+```python
+async def process_image(image):
+    # 1. 检查身体是否有摄像头 ← 关键检查
+    has_camera = body.has_capability("vision")
+    
+    if not has_camera:
+        # 来自用户上传或外部源
+        if image.source == "user_provided":
+            return analyze_user_image(image)
+        else:
+            return {
+                "error": "No camera",
+                "message": "我没有摄像头，需要您提供图像"
+            }
+    
+    # 有摄像头，可以主动拍照分析
+    return analyze_camera_feed()
+```
+
+#### MotorCortex（运动皮层）- 能力限制的代码生成
+
+```python
+async def generate_code(intent):
+    # 1. 获取身体能力 ← 先获取能力
+    capabilities = body.get_capabilities()
+    
+    # 2. 只使用身体能够执行的 API ← 核心逻辑
+    available_api = filter_api(UNITREE_API, capabilities)
+    
+    # 3. 生成代码（限制在可用 API）
+    code = generate_from_template_or_llm(
+        intent,
+        available_api  # 重点：限制 API 范围
+    )
+    
+    # 4. 验证代码不会调用不可用的 API
+    validate_code(code, available_api)
+    
+    # 5. 执行
+    return execute_code(code)
+```
+
+#### Hippocampus（海马体）- 能力感知的学习记录
+
+```python
+def record_learning(skill_id, success: bool):
+    # 记录不仅学了什么，还记录在什么身体约束下学的
+    entry = {
+        "skill": skill_id,
+        "success": success,
+        "body_config": current_body_config(),     # ← 记录身体状态
+        "capabilities": current_capabilities(),   # ← 记录当时能力
+        "timestamp": now(),
+    }
+    
+    # 当迁移到其他机器人时，检查能力是否兼容
+    # G1 的"高空跳跃"技能迁移到 Go2 时：
+    # Go2 能跳吗？最大高度？这会影响技能的适用性
+```
+
+### Phase 5.1 vs Phase 5.2 的设计对比
+
+#### Phase 5.1: 聊天交互与软技能调试 ✅ (已完成)
+
+**没有物理身体的情况**
+- ✅ 验证大脑的纯软能力（推理、学习、对话）
+- ✅ 建立性能基准
+- ✅ 测试 LLM 集成
+- ✅ 验证记忆系统
+
+**测试场景**:
+```
+"告诉我一个笑话" → ✅ 工作（无需身体）
+"计算 2^10" → ✅ 工作（无需身体）
+"怎样教小孩学加法" → ✅ 工作（无需身体）
+"看看我给你的这张图" → ✅ 工作（接受用户输入）
+```
+
+#### Phase 5.2: 真机集成测试与调试 🔄 (待完成)
+
+**有物理身体的情况，且大脑主动适应身体能力**
+
+```python
+# 启动时：自动检测和适应
+robot = connect_to_unitree_g1()
+capabilities = robot.get_capabilities()  # 检测能力
+brain.set_body_constraints(capabilities)  # 告诉大脑身体能力
+
+# 运行时：根据能力调整行为
+if "gripper" in capabilities:
+    # 可以执行夹爪相关指令
+    execute_manipulation_skills()
+else:
+    # 禁用夹爪，提供替代方案
+    suggest_alternative_methods()
+
+if "camera" in capabilities:
+    # 可以主动视觉
+    enable_active_vision()
+else:
+    # 要求用户提供图像
+    request_user_images()
+```
+
+---
+
 ## 系统整体架构与完整数据流
 
 ### 1. 端到端系统数据流
