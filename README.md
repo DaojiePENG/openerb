@@ -10,6 +10,9 @@
 |------|------|------|
 | [README.md](README.md) | 项目概览 | 所有人 |
 | [QUICK_START.md](QUICK_START.md) | 3 分钟快速开始 | 新用户 |
+| **[QUICK_START_DEPLOYMENT.md](docs/QUICK_START_DEPLOYMENT.md)** | **30 分钟真机部署** | **机器人用户** |
+| **[ROBOT_DEPLOYMENT_DEBUG.md](docs/ROBOT_DEPLOYMENT_DEBUG.md)** | **真机部署调试指南** | **开发者/调试人员** |
+| **[SYSTEM_FAMILIARIZATION.md](docs/SYSTEM_FAMILIARIZATION.md)** | **系统功能熟悉指南** | **开发者/用户** |
 | [PHASE1_COMPLETE.md](PHASE1_COMPLETE.md) | Phase 1 交付总结 | 项目经理 |
 | [docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md) | 完整系统设计 + 安全架构 | 架构师/开发者 |
 | [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) | 5 阶段开发路线图 | 项目规划 |
@@ -54,6 +57,42 @@ pip install -e .
 python -m openerb.core.bootstrap init --robot-type G1
 ```
 
+### 🚀 真机部署快速开始
+
+**30 分钟内让 OpenERB 在真实机器人上运行！**
+
+#### 1. 硬件连接
+```bash
+# G1 机器人
+ssh unitree@192.168.123.161
+
+# Go2 机器人  
+ssh unitree@192.168.12.1
+```
+
+#### 2. 一键部署测试
+```bash
+# 运行自动化部署测试
+python scripts/robot_deployment_test.py \
+    --robot-type G1 \
+    --robot-ip 192.168.123.161
+```
+
+#### 3. 基础功能验证
+```python
+from openerb.modules.system_integration import IntegrationEngine
+from openerb.core.types import Intent, UserProfile
+
+engine = IntegrationEngine()
+intent = Intent("向前走一步", "walk_forward", {"distance": 0.5})
+user = UserProfile("operator", "操作员")
+
+result = await engine.execute_intent(intent, user, "G1")
+print(f"执行结果: {result['status']}")
+```
+
+📖 **详细指南**: [30 分钟真机部署](docs/QUICK_START_DEPLOYMENT.md) | [部署调试指南](docs/ROBOT_DEPLOYMENT_DEBUG.md) | [系统功能熟悉](docs/SYSTEM_FAMILIARIZATION.md)
+
 ### 启动对话Agent
 
 ```bash
@@ -88,6 +127,9 @@ openerb/
 │   ├── users/                     # 用户档案
 │   └── memories/                  # 记忆与学习历史
 ├── tests/                         # 测试用例
+├── scripts/                       # 🆕 部署和测试脚本
+│   ├── robot_deployment_test.py   # 真机部署测试脚本
+│   └── ...                        # 其他工具脚本
 ├── docs/                          # 文档
 └── generated_code/                # 运行时生成的代码
 ```
@@ -101,6 +143,8 @@ openerb/
 - **机体识别**: 自动识别当前控制的机器人类型
 - **知识迁移**: 在不同机器人平台间迁移通用技能
 - **机器人协作**: 机器人间的技能分享和通信
+- **🆕 真机部署**: 完整的 Unitree G1/Go2 机器人部署支持
+- **🆕 自动化测试**: 一键部署验证和系统诊断工具
 
 ## 模块说明
 

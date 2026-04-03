@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Optional, Dict, Any
 
 from openerb.core.types import Intent, UserProfile, RobotType, Skill, CommunicationNode, SkillType, SkillStatus
@@ -6,6 +7,7 @@ from openerb.modules.cerebellum import Cerebellum
 from openerb.modules.hippocampus import Hippocampus
 from openerb.modules.communication import CommunicationModule
 from openerb.modules.motor_cortex import MotorCortex
+from openerb.core.concurrency_optimizer import concurrency_optimizer
 
 logger = logging.getLogger(__name__)
 
@@ -34,11 +36,27 @@ class IntegrationEngine:
         """Process intent end-to-end and share learned skill."""
         logger.info("IntegrationEngine.execute_intent: %s", intent.action)
 
+        # Check resource limits before processing
+        await concurrency_optimizer.resource_limiter.wait_for_resources()
+
+        # Use concurrent execution for better performance
+        return await concurrency_optimizer.async_executor.execute_task(
+            self._execute_intent_impl(intent, user, robot_type),
+            task_id=f"intent_{intent.action}_{int(time.time())}"
+        )
+
+    async def _execute_intent_impl(
+        self,
+        intent: Intent,
+        user: Optional[UserProfile] = None,
+        robot_type: RobotType = RobotType.G1,
+    ) -> Dict[str, Any]:
+        """Internal implementation of intent execution."""
         # 1. Search existing skill from Cerebellum
         existing = self.cerebellum.search_skill(intent.action, robot_type=robot_type)
 
         if existing:
-            selected_skill = self.cerebellum.get_skill(existing[0]["skill_id"])
+            selected_skill = self.cerebellum.get_skill(existing[0]["id"])
             logger.info("Found existing skill %s for intent %s", selected_skill.get("name"), intent.action)
             from_existing = True
         else:

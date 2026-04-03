@@ -10,6 +10,7 @@ import json
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from openerb.core.types import Skill, SkillType, RobotType
+from openerb.core.memory_optimizer import memory_optimizer
 
 logger = logging.getLogger(__name__)
 
@@ -91,8 +92,9 @@ class SkillLibrary:
 
         self.skills[skill_id] = skill_data
         
-        # Invalidate search cache
+        # Invalidate caches
         self._search_cache.clear()
+        memory_optimizer.skill_cache.invalidate(skill_id)
         
         logger.info(f"Registered skill: {skill.name} (ID: {skill_id})")
         return skill_id
@@ -180,8 +182,18 @@ class SkillLibrary:
         Returns:
             Skill data if found, None otherwise
         """
+        # Try cache first
+        cached_skill = memory_optimizer.skill_cache.get(skill_id)
+        if cached_skill:
+            return cached_skill
+
+        # Get from storage
         if skill_id in self.skills:
-            return self.skills[skill_id]
+            skill_data = self.skills[skill_id]
+            # Cache the result
+            memory_optimizer.skill_cache.put(skill_id, skill_data)
+            return skill_data
+
         logger.warning(f"Skill not found: {skill_id}")
         return None
 
