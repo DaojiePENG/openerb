@@ -232,6 +232,50 @@ class SkillPackage:
 
 
 @dataclass
+class CommunicationNode:
+    """Robot network node for communication between agents."""
+    node_id: str
+    robot_type: RobotType
+    address: str
+    capabilities: Dict[str, Any] = field(default_factory=dict)
+    last_seen: datetime = field(default_factory=datetime.now)
+
+
+@dataclass
+class Message:
+    """Message packet for robot communication."""
+    message_id: str
+    sender_id: str
+    receiver_id: str
+    message_type: str
+    payload: Dict[str, Any]
+    timestamp: datetime = field(default_factory=datetime.now)
+
+
+@dataclass
+class ExperienceReport:
+    """Report from a robot of skill performance and environment signals."""
+    node_id: str
+    skill_id: str
+    success: bool
+    duration_ms: float
+    confidence: float
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    timestamp: datetime = field(default_factory=datetime.now)
+
+
+@dataclass
+class CollaborationPolicy:
+    """Configuration for distributed communication and learning."""
+    max_concurrent_transfers: int = 5
+    bandwidth_limit_mbps: float = 10.0
+    trust_threshold: float = 0.7
+    enable_encryption: bool = True
+    allowed_robot_types: List[RobotType] = field(default_factory=lambda: [RobotType.G1, RobotType.G1_EDU, RobotType.GO1, RobotType.GO2, RobotType.GO2_EDU])
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class CodeExecutionPolicy:
     """Security policy for code execution."""
     sandbox_type: 'SandboxType' = SandboxType.RESTRICTED_PYTHON
