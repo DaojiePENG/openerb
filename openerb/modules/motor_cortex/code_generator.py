@@ -6,7 +6,9 @@ from typing import Optional, Dict, List, Any
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from openerb.core.types import Intent, RobotType, Skill, RobotContext
+from openerb.llm.base import Message
 from openerb.modules.motor_cortex.code_template_library import CodeTemplateLibrary
+from openerb.prompts import load_prompt
 
 if TYPE_CHECKING:
     from openerb.llm.base import LLMProvider
@@ -30,20 +32,8 @@ class GeneratedCode:
 class CodeGenerator:
     """Generate executable code from intents using LLM and templates."""
     
-    # System prompt for code generation
-    SYSTEM_PROMPT = """You are an expert robot programmer. Your task is to generate clean, safe, and efficient Python code for robot control based on user intents.
-
-Guidelines:
-1. Always use the provided templates as base, fill in placeholders
-2. Ensure code is safe - no dangerous operations
-3. Include error handling
-4. Return the complete code block wrapped in ```python ... ```
-5. Ensure code returns a result dictionary with 'success' and 'status' fields
-6. Use only allowed imports and modules
-
-Template Format:
-Templates have placeholder values like {param_name} that should be replaced with actual values.
-"""
+    # System prompt loaded from prompts/code_generator.md
+    SYSTEM_PROMPT = load_prompt("code_generator")
     
     def __init__(
         self,
@@ -186,44 +176,40 @@ Templates have placeholder values like {param_name} that should be replaced with
         intent: Intent,
         robot_context: Optional[RobotContext]
     ) -> Optional[GeneratedCode]:
-        """Generate code using LLM.
+        """Generate code using LLM agent.
         
-        Args:
-            intent: User intent
-            robot_context: Robot context
-        
-        Returns:
-            GeneratedCode from LLM
+        This is the primary code generation path - uses a dedicated LLM
+        to write Python code for the user's request.
         """
         if not self.llm_client:
             return None
         
-        logger.info("Generating code with LLM")
+        logger.info("Generating code with LLM agent")
         
-        # Build prompt
-        context_info = self._build_context_info(robot_context)
-        prompt = f"""Generate Python code to accomplish this robot task:
-
-Action: {intent.action}
+        # Build a clear prompt for code generation
+        prompt = f"""User request: "{intent.raw_text}"
+Action type: {intent.action}
 Parameters: {intent.parameters}
-Description: {intent.raw_text}
 
-{context_info}
+Generate Python code that accomplishes this request.
+The code should:
+1. Perform the requested task directly (no function wrapper needed)
+2. Use print() to clearly show the result to the user
+3. Be self-contained and executable as-is
 
-Requirements:
-1. Returns a dict with 'success' and 'status' keys
-2. Uses controllers from unitree_sdk_interface module
-3. Includes error handling
-4. Handles unexpected situations gracefully
-
-Code:"""
+IMPORTANT:
+- The code MUST print() the final answer. Code without print output is useless.
+- Only use standard library imports (math, re, json, datetime, collections, random, string).
+- Do NOT use eval(), exec(), open(), os, sys, subprocess.
+- Do NOT wrap code in a function unless the task requires it. Just write the code directly."""
         
         try:
-            # Call LLM
             response = await self.llm_client.call(
-                messages=[{"role": "user", "content": prompt}],
-                system=self.SYSTEM_PROMPT,
-                temperature=0.5,
+                messages=[
+                    Message(role="system", content=self.SYSTEM_PROMPT),
+                    Message(role="user", content=prompt),
+                ],
+                temperature=0.3,
                 max_tokens=2048
             )
             
@@ -238,12 +224,12 @@ Code:"""
                 skill_id=f"skill_{intent.timestamp.timestamp()}_llm",
                 intent=intent,
                 llm_used=True,
-                success_rate_prediction=0.5,  # Lower confidence for LLM
+                success_rate_prediction=0.7,
                 complexity="medium"
             )
             
             self.generation_history[generated.skill_id] = generated
-            logger.info("Generated code with LLM")
+            logger.info("Generated code with LLM agent")
             
             return generated
         

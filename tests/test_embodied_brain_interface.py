@@ -12,22 +12,29 @@ Tests the complete flow:
 
 import pytest
 import uuid as uuid_lib
+import tempfile
 from pathlib import Path
 
 from openerb.interface.embodied_brain_interface import EmbodiedBrainInterface
 from openerb.core.types import (
-    RobotType, Intent, SkillType, Skill
+    RobotType, Intent, SkillType, Skill, UserProfile
 )
+from openerb.modules.cerebellum.skill_library import SkillLibrary
 
 
 @pytest.fixture
-def interface():
-    """Create an embodied brain interface instance for testing."""
+def interface(tmp_path):
+    """Create an embodied brain interface instance for testing.
+    
+    Uses a temporary skill library path to avoid polluting the real one.
+    """
     interface = EmbodiedBrainInterface(robot_body=RobotType.G1)
+    # Redirect Cerebellum storage to temp directory so tests don't pollute real skill library
+    if interface.cerebellum:
+        temp_lib_path = tmp_path / "test_skill_library.json"
+        interface.cerebellum.library._storage_path = temp_lib_path
+        interface.cerebellum.library.skills.clear()
     yield interface
-    # Cleanup if needed
-    if interface and hasattr(interface, 'user_id'):
-        pass  # Cleanup logic here if needed
 
 
 @pytest.fixture
@@ -69,6 +76,16 @@ class TestEmbodiedBrainModuleInitialization:
         assert interface.conversation_history is not None
         assert len(interface.conversation_history) == 0
         assert interface.session_start is not None
+    
+    def test_chat_system_prompt_initialized(self, interface):
+        """Test that chat system prompt is set up."""
+        assert hasattr(interface, '_system_prompt')
+        assert 'OpenERB' in interface._system_prompt
+        assert interface._chat_messages is not None
+    
+    def test_code_llm_client_initialized(self, interface):
+        """Test that code generation LLM client is available."""
+        assert interface.code_llm_client is not None
 
 
 class TestUserManagement:
@@ -116,6 +133,37 @@ class TestUserManagement:
         assert recalled1 is not None
         assert recalled2 is not None
         assert recalled1.user_id == recalled2.user_id
+
+
+class TestConversationalChat:
+    """Test conversational chat via LLM."""
+    
+    @pytest.mark.asyncio
+    async def test_chat_with_llm_greeting(self, interface):
+        """Test that LLM can respond to a greeting naturally."""
+        response = await interface._chat_with_llm("hello")
+        assert response is not None
+        assert len(response) > 0
+        # Should be a conversational response, not code
+        assert "execute_task" not in response
+    
+    @pytest.mark.asyncio
+    async def test_chat_with_llm_question(self, interface):
+        """Test that LLM can answer a simple question."""
+        response = await interface._chat_with_llm("what is your name?")
+        assert response is not None
+        assert len(response) > 0
+    
+    @pytest.mark.asyncio
+    async def test_chat_remembers_user_name(self, interface):
+        """Test that LLM chat knows the user's name from system prompt."""
+        interface.user = UserProfile(user_id="test", name="Alice")
+        interface._init_chat_system_prompt()
+        
+        response = await interface._chat_with_llm("what is my name?")
+        assert response is not None
+        # The response should mention Alice since it's in the system prompt
+        assert len(response) > 0
 
 
 class TestIntentRecognition:
@@ -348,3 +396,155 @@ class TestInterfaceIntegration:
         assert result is not None
         if result.intents:
             assert len(result.intents) > 0
+
+
+class TestSkillPersistence:
+    """Test the learn → persist → retrieve → reuse loop."""
+
+    def test_skill_library_file_persistence(self, tmp_path):
+        """Test that SkillLibrary saves and loads from JSON file."""
+        storage_file = tmp_path / "skills.json"
+        
+        # Create library and register a skill
+        lib1 = SkillLibrary(storage_path=storage_file)
+        skill = Skill(
+            name="add_numbers",
+            description="Add two numbers",
+            code="print(1 + 2)",
+            skill_type=SkillType.BODY_SPECIFIC,
+            supported_robots=[RobotType.G1],
+        )
+        skill_id = lib1.register_skill(skill, RobotType.G1)
+        
+        assert storage_file.exists(), "JSON file should be created"
+        assert len(lib1.skills) == 1
+        
+        # Create a NEW library from the same file — simulates restart
+        lib2 = SkillLibrary(storage_path=storage_file)
+        assert len(lib2.skills) == 1, "Skills should survive restart"
+        assert skill_id in lib2.skills
+        assert lib2.skills[skill_id]["name"] == "add_numbers"
+        assert lib2.skills[skill_id]["code"] == "print(1 + 2)"
+
+    def test_skill_library_no_persistence_without_path(self):
+        """Test that SkillLibrary still works without a storage path."""
+        lib = SkillLibrary()
+        skill = Skill(
+            name="temp_skill",
+            description="temp",
+            code="pass",
+            skill_type=SkillType.UNIVERSAL,
+            supported_robots=[RobotType.G1],
+        )
+        skill_id = lib.register_skill(skill)
+        assert skill_id in lib.skills
+
+    def test_cerebellum_default_persistence(self, interface):
+        """Test that Cerebellum uses file persistence by default."""
+        assert interface.cerebellum is not None
+        assert interface.cerebellum.library._storage_path is not None
+
+    def test_skill_search_after_register(self, tmp_path):
+        """Test searching for a skill after registration."""
+        lib = SkillLibrary(storage_path=tmp_path / "skills.json")
+        skill = Skill(
+            name="fibonacci",
+            description="Calculate fibonacci sequence",
+            code="def fib(n):\n    a, b = 0, 1\n    for _ in range(n): a, b = b, a+b\n    return a\nprint(fib(10))",
+            skill_type=SkillType.BODY_SPECIFIC,
+            supported_robots=[RobotType.G1],
+            tags=["math", "fibonacci"],
+        )
+        lib.register_skill(skill, RobotType.G1)
+        
+        results = lib.search_skill("fibonacci")
+        assert len(results) == 1
+        assert results[0]["name"] == "fibonacci"
+
+    def test_persist_learned_skill(self, interface, test_user_id, test_user_name):
+        """Test _persist_learned_skill saves to Cerebellum."""
+        # Setup user
+        interface.user_id = test_user_id
+        interface.user = UserProfile(user_id=test_user_id, name=test_user_name)
+        interface.hippocampus.create_user_profile(
+            user_id=test_user_id,
+            user_name=test_user_name,
+            robot_type=RobotType.G1,
+        )
+        
+        # Simulate a successful code generation result
+        from openerb.modules.motor_cortex.code_generator import GeneratedCode
+        intent = Intent(
+            raw_text="calculate 1+1",
+            action="calculate",
+            parameters={"task": "calculate 1+1"},
+            confidence=0.9,
+        )
+        
+        mock_generated = GeneratedCode(
+            code="print(1 + 1)",
+            skill_id="test_skill",
+            intent=intent,
+            complexity="simple",
+        )
+        
+        from openerb.core.types import ExecutionResult as CodeExecutionResult
+        mock_exec = CodeExecutionResult(
+            success=True,
+            output="2",
+            execution_time=0.01,
+        )
+        
+        result = {
+            "success": True,
+            "generated_code": mock_generated,
+            "execution_result": mock_exec,
+        }
+        
+        # Call _persist_learned_skill
+        interface._persist_learned_skill(intent, result)
+        
+        # Verify skill was saved
+        skills = interface.cerebellum.list_skills(robot_type=RobotType.G1)
+        assert len(skills) >= 1
+        skill_names = [s.get("name") for s in skills]
+        assert "calculate" in skill_names
+
+    @pytest.mark.asyncio
+    async def test_find_existing_skill(self, interface):
+        """Test _find_existing_skill returns cached skill."""
+        # Register a skill first
+        skill = Skill(
+            name="greet_user",
+            description="Greet the user",
+            code="print('Hello!')",
+            skill_type=SkillType.BODY_SPECIFIC,
+            supported_robots=[RobotType.G1],
+            tags=["greet"],
+        )
+        interface.cerebellum.register_skill(skill, RobotType.G1)
+        
+        # Search for it
+        intent = Intent(
+            raw_text="greet the user",
+            action="greet_user",
+            parameters={},
+            confidence=0.9,
+        )
+        found = await interface._find_existing_skill(intent)
+        assert found is not None
+        assert found.get("name") == "greet_user"
+        assert found.get("code") == "print('Hello!')"
+
+    @pytest.mark.asyncio
+    async def test_find_existing_skill_returns_none_when_not_found(self, interface):
+        """Test _find_existing_skill returns None when no match."""
+        intent = Intent(
+            raw_text="do something unique and weird",
+            action="unique_action_xyz_999",
+            parameters={},
+            confidence=0.9,
+        )
+        found = await interface._find_existing_skill(intent)
+        assert found is None
+

@@ -7,6 +7,7 @@ basic CRUD operations for skills.
 
 import logging
 import json
+from pathlib import Path
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from openerb.core.types import Skill, SkillType, RobotType
@@ -35,12 +36,23 @@ class SkillLibrary:
         >>> results = library.search_skill("grasp", robot_type=RobotType.G1)
     """
 
-    def __init__(self):
-        """Initialize skill library with in-memory storage."""
+    def __init__(self, storage_path: Optional[Path] = None):
+        """Initialize skill library with optional file persistence.
+        
+        Args:
+            storage_path: Path to JSON file for persistent storage.
+                          If None, skills are only kept in memory.
+        """
         self.skills: Dict[str, Dict[str, Any]] = {}  # skill_id -> skill_data
         self._search_cache = {}  # Cache for search results
         self._skill_counter = 0  # Counter for generating IDs
-        logger.debug("Initialized SkillLibrary")
+        self._storage_path = storage_path
+        
+        # Load existing skills from disk
+        if self._storage_path:
+            self._load_from_disk()
+        
+        logger.debug(f"Initialized SkillLibrary ({len(self.skills)} skills loaded)")
 
     def register_skill(
         self,
@@ -95,6 +107,9 @@ class SkillLibrary:
         # Invalidate caches
         self._search_cache.clear()
         memory_optimizer.skill_cache.invalidate(skill_id)
+        
+        # Persist to disk
+        self._save_to_disk()
         
         logger.info(f"Registered skill: {skill.name} (ID: {skill_id})")
         return skill_id
@@ -230,6 +245,7 @@ class SkillLibrary:
         self.skills[skill_id] = updated
         
         self._search_cache.clear()
+        self._save_to_disk()
         logger.info(f"Updated skill: {skill_id}")
         return True
 
@@ -255,6 +271,7 @@ class SkillLibrary:
         self.update_skill(skill_id, {"metadata": metadata}, "soft_delete")
         
         self._search_cache.clear()
+        self._save_to_disk()
         logger.info(f"Soft deleted skill: {skill_id}")
         return True
 
@@ -376,3 +393,37 @@ class SkillLibrary:
             return 1.0  # Unexecuted skills considered successful
 
         return success_count / execution_count
+
+    # ========================================================================
+    # Persistence
+    # ========================================================================
+
+    def _save_to_disk(self):
+        """Persist all skills to JSON file."""
+        if not self._storage_path:
+            return
+        try:
+            self._storage_path.parent.mkdir(parents=True, exist_ok=True)
+            # Write to temp file first, then rename for atomicity
+            tmp_path = self._storage_path.with_suffix('.tmp')
+            with open(tmp_path, 'w', encoding='utf-8') as f:
+                json.dump(self.skills, f, indent=2, ensure_ascii=False)
+            tmp_path.replace(self._storage_path)
+            logger.debug(f"Persisted {len(self.skills)} skills to {self._storage_path}")
+        except Exception as e:
+            logger.error(f"Failed to persist skills: {e}")
+
+    def _load_from_disk(self):
+        """Load skills from JSON file."""
+        if not self._storage_path or not self._storage_path.exists():
+            return
+        try:
+            with open(self._storage_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                self.skills = data
+                logger.info(f"Loaded {len(self.skills)} skills from {self._storage_path}")
+            else:
+                logger.warning(f"Invalid skill library format in {self._storage_path}")
+        except Exception as e:
+            logger.error(f"Failed to load skills from disk: {e}")

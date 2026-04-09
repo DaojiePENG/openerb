@@ -93,20 +93,21 @@ print(f"执行结果: {result['status']}")
 ```bash
 # 启动聊天界面
 python scripts/chat.py
-
-# 或使用uv
-uv pip run python scripts/chat.py
 ```
 
-在聊天中你可以：
-- 🗣️ 与机器人进行自然对话
-- 🧮 测试数学计算能力
-- 😄 听机器人讲笑话
-- ✍️ 看它写故事和诗歌
-- 🧠 教它记住信息
-- 📚 观察它的学习过程
+系统采用两层架构：LLM 对话层负责理解意图并路由，MotorCortex 执行层负责代码生成与运行。
 
-用 `help` 命令查看所有功能。
+在聊天中你可以：
+- 🗣️ 自然语言对话（中英文均可）
+- 🧮 计算任务 — 自动生成代码执行，不依赖 LLM 知识
+- 🤖 机器人控制 — 生成运动代码
+- 📚 查看技能库 — 直接问"你会什么？"
+- 🧠 技能学习闭环 — 学到的技能自动保存、下次复用
+- ✏️ 自定义行为 — 编辑 `openerb/prompts/*.md` 文件调整 LLM 行为
+
+只有 `help` 和 `quit` 是硬编码命令，其他一切通过自然语言驱动。
+
+详见 [聊天交互指南](docs/CHAT_INTERFACE_GUIDE.md)。
 
 ### 启动主系统
 
@@ -133,6 +134,11 @@ openerb/
 │   ├── motor_cortex/              # 运动皮层 (代码生成)
 │   ├── vision/                    # 视觉模块
 │   └── communication/             # 通信与协作
+├── prompts/                       # 🆕 LLM 系统提示词（.md 文件集中管理）
+│   ├── chat_system.md             # 主对话 LLM 路由规则与行为约束
+│   ├── code_generator.md          # 代码生成 LLM 安全规则与输出格式
+│   ├── intent_recognition.md      # 意图识别 LLM JSON 输出格式
+│   └── result_interpreter.md      # 执行结果解释 LLM
 ├── skills/                        # 技能库
 │   ├── active/                    # 激活的技能
 │   ├── deprecated/                # 弃用的技能
@@ -160,6 +166,8 @@ openerb/
 - **机器人协作**: 机器人间的技能分享和通信
 - **🆕 真机部署**: 完整的 Unitree G1/Go2 机器人部署支持
 - **🆕 自动化测试**: 一键部署验证和系统诊断工具
+- **🆕 提示词管理**: LLM 系统提示词以 `.md` 文件集中管理，修改即生效
+- **🆕 技能学习闭环**: 代码生成 → 执行 → 结果解释 → 技能保存 → 自动复用
 
 ## 模块说明
 

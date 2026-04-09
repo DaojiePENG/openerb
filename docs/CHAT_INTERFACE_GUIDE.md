@@ -4,6 +4,10 @@
 
 OpenERB Chat Interface 是一个交互式聊天窗口，让您在没有物理机器人身体的情况下体验和调试具身机器大脑的核心能力。
 
+系统采用**两层架构**：
+1. **对话层** — LLM 自然语言对话，负责理解用户意图并进行路由
+2. **执行层** — 代码生成与执行（MotorCortex），处理计算、机器人控制等实际任务
+
 ## 快速开始
 
 ### 启动聊天界面
@@ -20,183 +24,169 @@ source .venv/bin/activate  # Linux/Mac
 pip install -e .            # 如果还未安装
 ```
 
-### 基础命令
+### 环境变量配置
 
-进入聊天后，您可以使用以下命令：
-
-| 命令 | 说明 | 示例 |
-|------|------|------|
-| `help` | 显示所有可用命令和软技能 | `help` |
-| `history` | 查看最近的10条对话记录 | `history` |
-| `stats` | 显示学习统计信息 | `stats` |
-| `skill [name]` | 演示特定的软技能 | `skill math` |
-| `quit`/`exit` | 退出聊天程序 | `quit` |
-
-## 软技能演示
-
-机器人支持6个核心软技能，可以通过自然语言触发或使用 `skill` 命令演示。
-
-### 1. 数学计算 (math)
-
-机器人可以进行基础数学运算。
-
-**触发方式**:
-- 消息中包含 "calculate"、"solve"、"math" 等关键词
-- 或使用：`skill math`
-
-**示例**:
-```
-You: calculate 10 + 5 * 2
-OpenERB: The result of 10+5*2 is 20
+```bash
+export DASHSCOPE_API_KEY="sk-your-key"       # 必需：LLM API 密钥
+export LLM_MODEL="qwen-vl-plus"              # 可选：对话模型
+export LLM_CODE_MODEL="qwen-plus"            # 可选：代码生成模型（可与对话模型不同）
 ```
 
-### 2. 讲笑话 (joke)
+### CLI 命令
 
-机器人维护了一个笑话库，可以随机讲述相关主题的笑话。
+进入聊天后，以下是硬编码的 CLI 命令：
 
-**触发方式**:
-- 消息中包含 "joke"、"funny"、"laugh" 等关键词
-- 或使用：`skill joke`
+| 命令 | 说明 |
+|------|------|
+| `help` | 显示帮助信息 |
+| `quit` / `exit` / `bye` | 退出聊天 |
 
-**示例**:
-```
-You: tell me a joke
-OpenERB: 🤖 Here's a joke: Why did the robot go on a diet? Because it had too many bytes!
-```
+其他所有交互都通过**自然语言**驱动，由 LLM 理解并路由。
 
-### 3. 写作创意 (write)
+## 核心能力
 
-机器人可以编写故事、诗歌和文档。
+### 自然对话
 
-**触发方式**:
-- 消息中包含 "write"、"poem"、"story" 等关键词
-- 或使用：`skill write`
-
-**示例**:
-```
-You: write a poem
-OpenERB: Roses are red,
-         Violets are blue,
-         I'm learning from you,
-         And growing too! 📝
-```
-
-### 4. 解释说明 (explain)
-
-机器人可以解释AI、机器人、学习等基础概念。
-
-**触发方式**:
-- 消息中包含 "explain"、"what is"、"tell me about" 等关键词
-- 或使用：`skill explain`
-
-**示例**:
-```
-You: explain AI
-OpenERB: AI stands for Artificial Intelligence. It's technology that allows machines to learn and make decisions.
-```
-
-### 5. 记忆功能 (remember)
-
-机器人可以记住您提供的信息，并在后续对话中回顾。
-
-**触发方式**:
-- 消息中包含 "remember" 关键词
-- 或使用：`skill remember`
-
-**示例**:
-```
-You: remember that I like robotics
-OpenERB: ✅ I'll remember: 'that I like robotics'
-```
-
-### 6. 学习能力 (learn)
-
-机器人表现出学习意愿和能力，可以接受新知识。
-
-**触发方式**:
-- 消息中包含 "learn"、"teach"、"training" 等关键词
-- 或使用：`skill learn`
-
-**示例**:
-```
-You: teach me something new
-OpenERB: I'm always learning! Every conversation helps me understand humans better. What would you like to teach me?
-```
-
-## 使用场景
-
-### 场景1：测试对话能力
+直接和机器人聊天，它会像朋友一样回应：
 
 ```
-You: What are you?
-OpenERB: I'm your embodied robot brain assistant!
-         I'm here to chat and learn with you! What would you like to talk about?
+You: 你好！
+OpenERB: 你好！我是 OpenERB，一个具身机器人大脑。有什么可以帮你的吗？
+
+You: What's your name?
+OpenERB: I'm OpenERB, an embodied robot brain assistant. I have a physical robot body (G1).
 ```
 
-### 场景2：教机器人新知识
+### 计算与代码执行
+
+当用户提出计算任务时，LLM 会发出 `[ACTION_REQUIRED]` 标记，系统自动生成代码并执行：
 
 ```
-You: remember that my favorite robot is Unitree G1
-OpenERB: ✅ I'll remember: 'that my favorite robot is Unitree G1'
-
-You: what's my favorite robot?
-OpenERB: (查询记忆库) You told me: Your favorite robot is Unitree G1
+You: what is 8 + 8?
+🧠 Thinking...
+🔧 Let me work on that...
+🆕 No existing skill found, generating new code...
+  └─ Method: 🤖 LLM-generated code | Time: 0.012s
+The answer to 8 + 8 is 16.
+💾 New skill learned and saved: math_calculation (id: 5b48e61e-08a)
 ```
 
-### 场景3：演示多个技能
+### 技能复用
+
+学过的技能会自动保存，下次遇到类似任务时直接复用：
 
 ```
-You: skill math
-OpenERB: (显示数学技能演示)
-
-You: skill joke  
-OpenERB: (随机讲一个笑话)
-
-You: history
-OpenERB: (显示对话历史表格)
+You: what is 9 + 9?
+🧠 Thinking...
+🔧 Let me work on that...
+📚 Found existing skill: math_calculation (id: 5b48e61e-08a), reusing...
+  └─ Method: ♻️ Reused skill: math_calculation | Time: 0.001s
+9 + 9 equals 18.
 ```
 
-### 场景4：查看学习进度
+### 技能库查询
+
+自然语言询问，LLM 会发出 `[LIST_SKILLS]` 标记触发技能列表：
 
 ```
-You: stats
-OpenERB: (显示学习统计面板)
-         • Session Duration: 0:15:30
-         • Total Interactions: 12
-         • Skills Learned: 3
-         • Skills Mastered: 1
+You: 你会什么？
+OpenERB: 以下是我当前掌握的技能：
+┏━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━┳━━━━━━━━━┓
+┃ #   ┃ Name             ┃ Description             ┃ Type    ┃ Source     ┃ Runs ┃ Success ┃
+┡━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━╇━━━━━━━━━┩
+│ 1   │ math_calculation │ Auto-learned: 8 + 8     │ body_sp │ 🤖 learned │    1 │   100%  │
+│ 2   │ move_forward     │ Auto-generated skill    │ body_sp │ 🤖 learned │    0 │       - │
+└─────┴──────────────────┴─────────────────────────┴─────────┴────────────┴──────┴─────────┘
+Storage: openerb/skills/skill_library.json
 ```
+
+### 用户档案
+
+```
+You: who am I?
+OpenERB: 让我查看一下你的信息：
+┏━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Property      ┃ Value                        ┃
+┡━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Name          │ Daojie                       │
+│ Session Start │ 2026-04-10 04:30:00          │
+└───────────────┴──────────────────────────────┘
+```
+
+## 系统架构
+
+### LLM 路由标记
+
+系统通过 LLM 在回复中嵌入的标记进行路由，所有行为约束通过**系统提示词**（`.md` 文件）定义，而非硬编码：
+
+| 标记 | 触发条件 | 系统行为 |
+|------|----------|----------|
+| `[ACTION_REQUIRED]` | 计算、机器人控制、需要执行的任务 | 代码生成 → 执行 → 结果解释 → 技能保存 |
+| `[CODE_REQUIRED]` | 用户要求写/生成代码 | 代码生成（展示，不一定执行） |
+| `[LIST_SKILLS]` | 查询能力、技能列表 | 读取 Cerebellum 展示技能表 |
+| `[USER_PROFILE]` | 查询"我是谁"、用户信息 | 展示用户档案 |
+| 无标记 | 普通对话 | 直接展示 LLM 回复 |
+
+### 提示词管理
+
+所有 LLM 实例的系统提示词以 `.md` 文件形式集中管理在 `openerb/prompts/` 目录下：
+
+```
+openerb/prompts/
+├── __init__.py              # load_prompt() 工具函数
+├── chat_system.md           # 主对话 LLM 系统提示词（路由规则、行为约束）
+├── code_generator.md        # 代码生成 LLM 系统提示词（安全规则、输出格式）
+├── intent_recognition.md    # 意图识别 LLM 系统提示词（JSON 输出格式）
+└── result_interpreter.md    # 执行结果解释 LLM 系统提示词
+```
+
+修改 `.md` 文件即可调整 LLM 行为，无需改动 Python 代码。
+
+### 技能持久化
+
+学到的技能以 JSON 格式保存在 `openerb/skills/skill_library.json`：
+
+```
+学习闭环：用户提问 → 代码生成 → 执行 → 结果反馈 → 技能保存 → 下次复用
+```
+
+- 新技能自动保存（名称由 `_derive_skill_name()` 从用户输入推导）
+- 已有技能通过 Cerebellum 搜索匹配并复用
+- 执行统计（运行次数、成功率）自动更新
 
 ## 故障排除
 
-### 问题1：命令找不到
+### LLM 未初始化
 
-**现象**: 键入命令后没有响应
+**现象**: 看到 "LLM not available" 提示
 
 **解决**:
-- 确保虚拟环境已激活：`source .venv/bin/activate`
-- 确保依赖已安装：`python -m pip install -e .`
-- 检查是否有错误信息
+```bash
+export DASHSCOPE_API_KEY="sk-your-key"
+# 或在项目根目录创建 .env 文件
+echo 'DASHSCOPE_API_KEY=sk-your-key' > .env
+```
 
-### 问题2：LLM未初始化
+### LLM 不返回 `[ACTION_REQUIRED]`
 
-**现象**: 看到警告 "Failed to initialize LLM client"
+**现象**: 数学问题被 LLM 直接回答，没有走代码执行
 
-**原因**: dashscope 模块未安装，但这不影响基础功能
+**解决**: 编辑 `openerb/prompts/chat_system.md`，加强 Action Routing 部分的约束描述。系统提示词的质量直接决定路由准确性。
 
-**解决方案**:
-- 对话仍然可以进行，使用fallback模式
-- 如需完整LLM支持，配置环境变量：
-  ```bash
-  export LLM_PROVIDER=dashscope
-  export LLM_API_KEY=your_api_key
-  ```
+### 技能没有保存
 
-### 问题3：记忆功能报错
+**现象**: 技能执行成功但下次没有复用
 
-**现象**: 使用 remember 命令时出错
+**检查**:
+1. 确认 `openerb/skills/skill_library.json` 文件存在且有写入权限
+2. 查看日志中是否有 `💾 Persisted skill` 记录
+3. 确认 Cerebellum 模块已正确初始化
 
-**原因**: Hippocampus 模块初始化需要用户档案
+### Profile not found 警告
+
+**现象**: 执行后出现 "Profile not found for ..." 警告
+
+**原因**: Hippocampus 中的用户档案未创建。这是非阻塞的警告，不影响核心功能。
 
 **解决方案**: 正在改进，当前版本可使用其他技能
 

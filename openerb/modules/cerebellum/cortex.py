@@ -5,6 +5,7 @@ versioning, scoring, import/export, and garbage collection.
 """
 
 import logging
+from pathlib import Path
 from typing import Optional, List, Dict, Any
 from openerb.core.types import Skill, SkillType, RobotType
 from .skill_library import SkillLibrary
@@ -41,9 +42,15 @@ class Cerebellum:
         >>> json_str = cerebellum.export_skill(skill_id)
     """
 
-    def __init__(self):
-        """Initialize Cerebellum with all components."""
-        self.library = SkillLibrary()
+    def __init__(self, storage_path: Optional[Path] = None):
+        """Initialize Cerebellum with all components.
+        
+        Args:
+            storage_path: Path to skill library JSON file.
+                          Defaults to <project>/openerb/skills/skill_library.json
+        """
+        default_path = Path(__file__).resolve().parent.parent.parent / "skills" / "skill_library.json"
+        self.library = SkillLibrary(storage_path=storage_path or default_path)
         self.version_manager = SkillVersionManager()
         self.scorer = SkillScorer()
         self.exporter = SkillExporter()

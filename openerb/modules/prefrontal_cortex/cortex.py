@@ -17,6 +17,7 @@ from datetime import datetime
 from openerb.core.types import Intent, Subtask, IntentResult, ConversationContext, ConversationTurn, UserProfile
 from openerb.llm.client import LLMClient
 from openerb.llm.base import Message
+from openerb.prompts import load_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -53,29 +54,8 @@ class PrefrontalCortex:
         >>> print(result.intents)
     """
 
-    # System prompt for intent recognition
-    SYSTEM_PROMPT = """You are an intelligent assistant for robotic control. 
-Your task is to analyze user inputs and extract structured information about their intentions.
-
-Analyze the user's request and return a JSON response with:
-{
-    "intents": [
-        {
-            "action": "primary action (move, grasp, learn, etc.)",
-            "parameters": {"param1": "value1", ...},
-            "confidence": 0.9 (0-1)
-        }
-    ],
-    "subtasks": [
-        {
-            "task": "description",
-            "priority": 1,
-            "depends_on": []
-        }
-    ]
-}
-
-Be precise and concise in your response."""
+    # System prompt loaded from prompts/intent_recognition.md
+    SYSTEM_PROMPT = load_prompt("intent_recognition")
 
     def __init__(
         self,
