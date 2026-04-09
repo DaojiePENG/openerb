@@ -192,16 +192,17 @@ Action type: {intent.action}
 Parameters: {intent.parameters}
 
 Generate Python code that accomplishes this request.
-The code should:
-1. Perform the requested task directly (no function wrapper needed)
-2. Use print() to clearly show the result to the user
-3. Be self-contained and executable as-is
+The code MUST:
+1. Define a REUSABLE function with clear parameters (e.g., `def calculate(expr)`, `def fibonacci(n)`)
+2. Call the function with the user's specific values
+3. Use print() to clearly show the result to the user
+4. Be self-contained and executable as-is
 
 IMPORTANT:
+- Write a GENERAL PURPOSE function first, then call it. Do NOT hardcode the user's values.
 - The code MUST print() the final answer. Code without print output is useless.
 - Only use standard library imports (math, re, json, datetime, collections, random, string).
-- Do NOT use eval(), exec(), open(), os, sys, subprocess.
-- Do NOT wrap code in a function unless the task requires it. Just write the code directly."""
+- Do NOT use eval(), exec(), open(), os, sys, subprocess."""
         
         try:
             response = await self.llm_client.call(

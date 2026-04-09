@@ -323,30 +323,25 @@ class EmbodiedBrainInterface:
                 self.console.print("[yellow]I'm having trouble thinking right now. Try again?[/yellow]")
                 return
             
-            # Check if LLM signals an action is needed
-            if "[ACTION_REQUIRED]" in response or "[CODE_REQUIRED]" in response:
-                # Clean the marker from response
-                clean_response = response.replace("[ACTION_REQUIRED]", "").replace("[CODE_REQUIRED]", "").strip()
+            # Parse marker from LLM response
+            marker = self._extract_marker(response)
+            
+            if marker in ("ACTION_REQUIRED", "CODE_REQUIRED"):
+                clean_response = response.replace("[ACTION_REQUIRED]", "").replace("[CODE_REQUIRED]", "").replace("[CHAT]", "").strip()
                 if clean_response:
                     self.console.print(f"[cyan]{clean_response}[/cyan]")
-                
-                # Route to action handling
                 await self._handle_action_request(user_input)
-            elif "[LIST_SKILLS]" in response:
-                # LLM decided to show skill list
-                clean_response = response.replace("[LIST_SKILLS]", "").strip()
+            elif marker == "LIST_SKILLS":
+                clean_response = response.replace("[LIST_SKILLS]", "").replace("[CHAT]", "").strip()
                 if clean_response:
                     self.console.print(f"[cyan]{clean_response}[/cyan]")
                 await self._list_skills()
-                # Record a short note — do NOT put skill details in history
-                # so the LLM cannot recite them from memory next time
                 self._chat_messages.append(Message(
                     role="assistant",
                     content="[I displayed the skill library table to the user. I do not know the contents — I must use [LIST_SKILLS] again if asked.]"
                 ))
-            elif "[USER_PROFILE]" in response:
-                # LLM decided to show user profile
-                clean_response = response.replace("[USER_PROFILE]", "").strip()
+            elif marker == "USER_PROFILE":
+                clean_response = response.replace("[USER_PROFILE]", "").replace("[CHAT]", "").strip()
                 if clean_response:
                     self.console.print(f"[cyan]{clean_response}[/cyan]")
                 self._print_user_stats()
@@ -355,10 +350,9 @@ class EmbodiedBrainInterface:
                     content="[I displayed the user profile table to the user. I must use [USER_PROFILE] again if asked.]"
                 ))
             else:
-                # Pure conversational response - display it
+                # No action marker — display as conversation
                 clean_response = response.replace("[CHAT]", "").strip()
                 self.console.print(f"[cyan]{clean_response}[/cyan]")
-                # Add assistant response to chat history
                 self._chat_messages.append(Message(role="assistant", content=clean_response))
             
             # Record interaction
@@ -376,6 +370,68 @@ class EmbodiedBrainInterface:
         except Exception as e:
             logger.error(f"Error processing input: {e}")
             self.console.print(f"[yellow]Sorry, I encountered an error: {e}[/yellow]")
+
+    def _extract_marker(self, response: str) -> Optional[str]:
+        """Extract the routing marker from the LLM response.
+        
+        First checks if the LLM included an explicit marker.
+        If not, falls back to intent inference from the user's last message
+        to compensate for model non-compliance.
+        
+        Returns:
+            Marker name (e.g. 'ACTION_REQUIRED', 'LIST_SKILLS') or None for chat.
+        """
+        import re
+        
+        # 1. Check for explicit markers in response
+        markers = ["ACTION_REQUIRED", "CODE_REQUIRED", "LIST_SKILLS", "USER_PROFILE"]
+        for m in markers:
+            if f"[{m}]" in response:
+                return m
+        
+        # 2. Fallback: infer from the user's last input
+        #    This compensates when the LLM ignores the structured format.
+        if not self._chat_messages:
+            return None
+        
+        last_user_msg = None
+        for msg in reversed(self._chat_messages):
+            if msg.role == "user":
+                last_user_msg = msg.content.lower()
+                break
+        
+        if not last_user_msg:
+            return None
+        
+        # Skill listing patterns
+        skill_patterns = [
+            r'skill|能力|技能|你会什么|what can you do|show.*(skill|能力)',
+            r'能力列表|技能列表|skills?\s*list',
+        ]
+        for pat in skill_patterns:
+            if re.search(pat, last_user_msg):
+                logger.debug(f"Marker fallback: LIST_SKILLS (input matched '{pat}')")
+                return "LIST_SKILLS"
+        
+        # Computation / action patterns
+        action_patterns = [
+            r'\d+\s*[+\-*/^%]\s*\d+',            # math: 9*9, 1+1
+            r'calculat|计算|compute',               # explicit calc
+            r'fibonacci|斐波那契|factorial|阶乘',   # algorithms
+            r'生成|输出.*\d|排序|sort',              # generation/output
+            r'move|walk|grasp|grab|前进|移动|抓取',  # robot control
+            r'学习.*技能|learn.*skill',              # learn a skill
+        ]
+        for pat in action_patterns:
+            if re.search(pat, last_user_msg):
+                logger.debug(f"Marker fallback: ACTION_REQUIRED (input matched '{pat}')")
+                return "ACTION_REQUIRED"
+        
+        # User profile
+        if re.search(r'who am i|我的信息|我的资料', last_user_msg):
+            return "USER_PROFILE"
+        
+        return None
 
     async def _chat_with_llm(self, user_input: str) -> Optional[str]:
         """Have a natural conversation with the user via LLM.
@@ -527,7 +583,8 @@ class EmbodiedBrainInterface:
         """Derive a meaningful skill name from user input.
         
         Converts 'what is 6+9-2?' → 'math_calculation'
-        Converts 'generate fibonacci sequence' → 'fibonacci_sequence'
+        Converts 'generate fibonacci sequence' → 'fibonacci'
+        Converts 'calculate 1+1' → 'math_calculation'
         """
         import re
         text = user_input.lower().strip()
@@ -535,14 +592,18 @@ class EmbodiedBrainInterface:
         # Remove question markers
         text = re.sub(r'[?？!！。，,.]', '', text)
         
-        # Detect common patterns
-        if re.search(r'[\d]+\s*[+\-*/]\s*[\d]', text):
+        # Detect common patterns — produce stable, reusable names
+        if re.search(r'[\d]+\s*[+\-*/^%]\s*[\d]', text) or any(kw in text for kw in ['calculate', '计算', 'compute']):
             return "math_calculation"
         if any(kw in text for kw in ['fibonacci', '斐波那契']):
             return "fibonacci"
+        if any(kw in text for kw in ['factorial', '阶乘']):
+            return "factorial"
+        if any(kw in text for kw in ['prime', '素数', '质数']):
+            return "prime_numbers"
         if any(kw in text for kw in ['sort', '排序']):
             return "sort"
-        if any(kw in text for kw in ['move', 'walk', '移动', '走']):
+        if any(kw in text for kw in ['move', 'walk', '移动', '走', '前进']):
             return "move_forward"
         if any(kw in text for kw in ['grasp', 'grab', 'pick', '抓', '拿']):
             return "grasp_object"
@@ -669,7 +730,7 @@ Based on the execution result, give a brief, natural response to the user's ques
             try:
                 skill = Skill(
                     name=intent.action,
-                    description=f"Auto-learned: {intent.raw_text}",
+                    description=f"{intent.raw_text}",
                     code=generated_code.code,
                     dependencies=[],
                     tags=["auto_generated", "learned"],
