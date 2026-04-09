@@ -327,5 +327,270 @@
       "success_count": 0,
       "creation_source": "manual_registration"
     }
+  },
+  "c9e0d99a-92e": {
+    "id": "c9e0d99a-92e",
+    "name": "grasp_object",
+    "description": "Grasp an object with the gripper",
+    "code": "def grasp(force):\n    return execute_grasp(force)",
+    "skill_type": "body_specific",
+    "dependencies": [],
+    "tags": [
+      "manipulation",
+      "gripper"
+    ],
+    "supported_robots": [
+      "G1",
+      "Go2"
+    ],
+    "status": "draft",
+    "metadata": {
+      "created_at": "2026-04-10T05:24:31.506531",
+      "robot_type": "G1",
+      "description": "Test skill",
+      "tags": [
+        "manipulation",
+        "gripper"
+      ],
+      "execution_count": 0,
+      "success_count": 0,
+      "creation_source": "manual_registration"
+    }
+  },
+  "24f68fc3-e8e": {
+    "id": "24f68fc3-e8e",
+    "name": "grasp_object",
+    "description": "Grasp an object with the gripper",
+    "code": "optimized_code",
+    "skill_type": "body_specific",
+    "dependencies": [],
+    "tags": [
+      "manipulation",
+      "gripper"
+    ],
+    "supported_robots": [
+      "G1",
+      "Go2"
+    ],
+    "status": "draft",
+    "metadata": {
+      "created_at": "2026-04-10T05:24:31.509560",
+      "robot_type": "G1",
+      "description": "Grasp an object with the gripper",
+      "tags": [
+        "manipulation",
+        "gripper"
+      ],
+      "execution_count": 0,
+      "success_count": 0,
+      "creation_source": "manual_registration",
+      "last_updated": "2026-04-10T05:24:31.511810",
+      "update_source": "version_update"
+    },
+    "parameters": {
+      "force": 45
+    }
+  },
+  "0f6b0bef-6c6": {
+    "id": "0f6b0bef-6c6",
+    "name": "grasp_object",
+    "description": "Grasp an object with the gripper",
+    "code": "def grasp(force):\n    return execute_grasp(force)",
+    "skill_type": "body_specific",
+    "dependencies": [],
+    "tags": [
+      "manipulation",
+      "gripper"
+    ],
+    "supported_robots": [
+      "G1",
+      "Go2"
+    ],
+    "status": "draft",
+    "metadata": {
+      "created_at": "2026-04-10T05:24:31.515806",
+      "robot_type": "G1",
+      "description": "Grasp an object with the gripper",
+      "tags": [
+        "manipulation",
+        "gripper"
+      ],
+      "execution_count": 0,
+      "success_count": 0,
+      "creation_source": "manual_registration"
+    }
+  },
+  "406a1372-7d4": {
+    "id": "406a1372-7d4",
+    "name": "grasp_object",
+    "description": "Imported skill: grasp_object",
+    "code": "def grasp(force):\n    return execute_grasp(force)",
+    "skill_type": "hybrid",
+    "dependencies": [],
+    "tags": [
+      "manipulation",
+      "gripper"
+    ],
+    "supported_robots": [
+      "Go2"
+    ],
+    "status": "draft",
+    "metadata": {
+      "created_at": "2026-04-10T05:24:31.517517",
+      "robot_type": "Go2",
+      "description": "Imported: grasp_object",
+      "tags": [
+        "manipulation",
+        "gripper"
+      ],
+      "execution_count": 0,
+      "success_count": 0,
+      "creation_source": "manual_registration"
+    }
+  },
+  "3fa6230d-21d": {
+    "id": "3fa6230d-21d",
+    "name": "grasp_object",
+    "description": "Grasp an object with the gripper",
+    "code": "def grasp(force):\n    return execute_grasp(force)",
+    "skill_type": "body_specific",
+    "dependencies": [],
+    "tags": [
+      "manipulation",
+      "gripper"
+    ],
+    "supported_robots": [
+      "G1",
+      "Go2"
+    ],
+    "status": "draft",
+    "metadata": {
+      "created_at": "2026-04-10T05:24:31.520471",
+      "robot_type": "G1",
+      "description": "Grasp an object with the gripper",
+      "tags": [
+        "manipulation",
+        "gripper"
+      ],
+      "execution_count": 0,
+      "success_count": 0,
+      "creation_source": "manual_registration",
+      "deleted_at": "2026-04-10T05:24:31.522190",
+      "status": "active",
+      "last_updated": "2026-04-10T05:24:31.525440",
+      "update_source": "restore_from_trash",
+      "restored_at": "2026-04-10T05:24:31.525400"
+    }
+  },
+  "bce923f1-e15": {
+    "id": "bce923f1-e15",
+    "name": "skill_0",
+    "description": "Test skill 0",
+    "code": "def skill_0(): pass",
+    "skill_type": "universal",
+    "dependencies": [],
+    "tags": [],
+    "supported_robots": [],
+    "status": "draft",
+    "metadata": {
+      "created_at": "2026-04-10T05:24:31.532382",
+      "robot_type": "universal",
+      "description": "Test skill 0",
+      "tags": [],
+      "execution_count": 0,
+      "success_count": 0,
+      "creation_source": "manual_registration"
+    }
+  },
+  "a88231b1-c3b": {
+    "id": "a88231b1-c3b",
+    "name": "skill_1",
+    "description": "Test skill 1",
+    "code": "def skill_1(): pass",
+    "skill_type": "universal",
+    "dependencies": [],
+    "tags": [],
+    "supported_robots": [],
+    "status": "draft",
+    "metadata": {
+      "created_at": "2026-04-10T05:24:31.536321",
+      "robot_type": "universal",
+      "description": "Test skill 1",
+      "tags": [],
+      "execution_count": 0,
+      "success_count": 0,
+      "creation_source": "manual_registration"
+    }
+  },
+  "231f77c2-8e4": {
+    "id": "231f77c2-8e4",
+    "name": "skill_2",
+    "description": "Test skill 2",
+    "code": "def skill_2(): pass",
+    "skill_type": "universal",
+    "dependencies": [],
+    "tags": [],
+    "supported_robots": [],
+    "status": "draft",
+    "metadata": {
+      "created_at": "2026-04-10T05:24:31.538497",
+      "robot_type": "universal",
+      "description": "Test skill 2",
+      "tags": [],
+      "execution_count": 0,
+      "success_count": 0,
+      "creation_source": "manual_registration"
+    }
+  },
+  "b21628ae-601": {
+    "id": "b21628ae-601",
+    "name": "grasp_object",
+    "description": "Grasp an object with the gripper",
+    "code": "def grasp(force):\n    return execute_grasp(force)",
+    "skill_type": "body_specific",
+    "dependencies": [],
+    "tags": [
+      "manipulation",
+      "gripper"
+    ],
+    "supported_robots": [
+      "G1",
+      "Go2"
+    ],
+    "status": "draft",
+    "metadata": {
+      "created_at": "2026-04-10T05:24:31.542472",
+      "robot_type": "G1",
+      "description": "Grasp an object with the gripper",
+      "tags": [
+        "manipulation",
+        "gripper"
+      ],
+      "execution_count": 0,
+      "success_count": 0,
+      "creation_source": "manual_registration"
+    }
+  },
+  "9c6a3dfa-1df": {
+    "id": "9c6a3dfa-1df",
+    "name": "navigate_from_scene",
+    "description": "Auto skill created by visual scene analysis",
+    "code": "def run():\n    return 'ok'",
+    "skill_type": "universal",
+    "dependencies": [],
+    "tags": [],
+    "supported_robots": [
+      "G1"
+    ],
+    "status": "draft",
+    "metadata": {
+      "created_at": "2026-04-10T05:24:42.188556",
+      "robot_type": "Go2",
+      "description": "Auto skill created by visual scene analysis",
+      "tags": [],
+      "execution_count": 0,
+      "success_count": 0,
+      "creation_source": "manual_registration"
+    }
   }
 }

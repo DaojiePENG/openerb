@@ -69,6 +69,9 @@ class EmbodiedBrainInterface:
         
         Loads the prompt template from prompts/chat_system.md and fills
         in runtime placeholders.
+        
+        NOTE: Skill inventory is deliberately NOT included in the system prompt.
+        This forces the LLM to use [LIST_SKILLS] rather than reciting from memory.
         """
         robot_info = f"Robot body: {self.robot_body.value}"
         if self.insular_cortex:
@@ -79,32 +82,13 @@ class EmbodiedBrainInterface:
                 pass
         
         user_name = self.user.name if self.user else "the user"
-        skill_summary = self._get_skill_summary()
         
         template = load_prompt("chat_system")
         self._system_prompt = template.format(
             robot_body=self.robot_body.value,
             robot_info=robot_info,
             user_name=user_name,
-            skill_summary=skill_summary,
         )
-    
-    def _get_skill_summary(self) -> str:
-        """Build a brief skill inventory string for the system prompt."""
-        if not self.cerebellum:
-            return ""
-        try:
-            skills = self.cerebellum.list_skills(robot_type=self.robot_body)
-            if not skills:
-                return "- Skill library: empty (no skills learned yet)"
-            lines = [f"- Skill library: {len(skills)} skills available:"]
-            for s in skills[:20]:  # Cap at 20 to avoid prompt bloat
-                name = s.get('name', '?') if isinstance(s, dict) else getattr(s, 'name', '?')
-                desc = s.get('description', '') if isinstance(s, dict) else getattr(s, 'description', '')
-                lines.append(f"  • {name}: {desc[:60]}")
-            return "\n".join(lines)
-        except Exception:
-            return ""
 
     def _init_modules(self):
         """Initialize all neural system modules."""
@@ -327,14 +311,22 @@ class EmbodiedBrainInterface:
                 if clean_response:
                     self.console.print(f"[cyan]{clean_response}[/cyan]")
                 await self._list_skills()
-                self._chat_messages.append(Message(role="assistant", content=clean_response or "Here are my skills:"))
+                # Record a short note — do NOT put skill details in history
+                # so the LLM cannot recite them from memory next time
+                self._chat_messages.append(Message(
+                    role="assistant",
+                    content="[I displayed the skill library table to the user. I do not know the contents — I must use [LIST_SKILLS] again if asked.]"
+                ))
             elif "[USER_PROFILE]" in response:
                 # LLM decided to show user profile
                 clean_response = response.replace("[USER_PROFILE]", "").strip()
                 if clean_response:
                     self.console.print(f"[cyan]{clean_response}[/cyan]")
                 self._print_user_stats()
-                self._chat_messages.append(Message(role="assistant", content=clean_response or "Here is your profile:"))
+                self._chat_messages.append(Message(
+                    role="assistant",
+                    content="[I displayed the user profile table to the user. I must use [USER_PROFILE] again if asked.]"
+                ))
             else:
                 # Pure conversational response - display it
                 self.console.print(f"[cyan]{response}[/cyan]")
