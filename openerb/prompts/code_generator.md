@@ -19,22 +19,26 @@ The function should be GENERAL PURPOSE — it must work for any valid input, not
 ### Good Examples
 
 ```python
-import math
+def calculate(a: float, b: float, op: str) -> float:
+    """Perform a basic arithmetic operation."""
+    if op == '+':
+        return a + b
+    elif op == '-':
+        return a - b
+    elif op == '*':
+        return a * b
+    elif op == '/':
+        if b == 0:
+            raise ValueError("Cannot divide by zero")
+        return a / b
+    elif op == '**' or op == '^':
+        return a ** b
+    else:
+        raise ValueError(f"Unknown operator: {op}")
 
-def calculate(expression_str: str) -> float:
-    """Safely evaluate a simple math expression."""
-    # Parse and compute simple arithmetic
-    expression_str = expression_str.replace('^', '**')
-    # Only allow digits, operators, parentheses, dots
-    import re
-    if not re.match(r'^[\d+\-*/().\s^]+$', expression_str):
-        raise ValueError(f"Invalid expression: {expression_str}")
-    result = eval(expression_str)  # safe: validated input
-    return result
-
-# User asked: 1 + 1
-result = calculate("1 + 1")
-print(f"1 + 1 = {result}")
+# User asked: 8 + 8
+result = calculate(8, 8, '+')
+print(f"8 + 8 = {result}")
 ```
 
 ```python
@@ -88,3 +92,5 @@ for _ in range(20):
 - The function must be GENERAL (parameterized), then called with the user's specific values.
 - The code MUST use `print()` to output the answer.
 - Keep code simple, clear, and well-commented.
+- NEVER use eval(), exec(), compile(), open(), __import__(), input() — these will cause validation failure.
+- For math, use explicit operators (+, -, *, /, **) instead of eval().
