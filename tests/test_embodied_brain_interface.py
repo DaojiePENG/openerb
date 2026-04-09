@@ -79,8 +79,8 @@ class TestEmbodiedBrainModuleInitialization:
     
     def test_chat_system_prompt_initialized(self, interface):
         """Test that chat system prompt is set up."""
-        assert hasattr(interface, '_system_prompt')
-        assert 'OpenERB' in interface._system_prompt
+        assert hasattr(interface, '_system_prompt_template')
+        assert 'OpenERB' in interface._system_prompt_template
         assert interface._chat_messages is not None
     
     def test_code_llm_client_initialized(self, interface):

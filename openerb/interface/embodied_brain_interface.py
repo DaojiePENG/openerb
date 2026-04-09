@@ -65,13 +65,11 @@ class EmbodiedBrainInterface:
         logger.info(f"🧠 Embodied Brain Interface initialized for {self.robot_body.value}")
     
     def _init_chat_system_prompt(self):
-        """Initialize the system prompt for conversational chat.
+        """Initialize the system prompt template for conversational chat.
         
         Loads the prompt template from prompts/chat_system.md and fills
-        in runtime placeholders.
-        
-        NOTE: Skill inventory is deliberately NOT included in the system prompt.
-        This forces the LLM to use [LIST_SKILLS] rather than reciting from memory.
+        in runtime placeholders (except skill_summary, which is filled
+        dynamically per call in _chat_with_llm).
         """
         robot_info = f"Robot body: {self.robot_body.value}"
         if self.insular_cortex:
@@ -84,11 +82,40 @@ class EmbodiedBrainInterface:
         user_name = self.user.name if self.user else "the user"
         
         template = load_prompt("chat_system")
-        self._system_prompt = template.format(
+        # Fill static placeholders; leave {skill_summary} for dynamic fill per call
+        self._system_prompt_template = template.format(
             robot_body=self.robot_body.value,
             robot_info=robot_info,
             user_name=user_name,
+            skill_summary="{skill_summary}",
         )
+
+    def _get_skill_summary(self) -> str:
+        """Build a fresh skill inventory string from the Cerebellum.
+        
+        Called before each LLM call to ensure the prompt reflects the
+        latest skills (which may have been added or removed).
+        """
+        if not self.cerebellum:
+            return "Skill library not available."
+        
+        try:
+            skills = self.cerebellum.list_skills(robot_type=self.robot_body)
+            if not skills:
+                return "Skill library is empty — no skills learned yet."
+            
+            lines = []
+            for skill in skills:
+                if isinstance(skill, dict):
+                    name = skill.get('name', 'Unknown')
+                    desc = skill.get('description', '')
+                    lines.append(f"- {name}: {desc}")
+                else:
+                    lines.append(f"- {getattr(skill, 'name', str(skill))}")
+            return "\n".join(lines)
+        except Exception as e:
+            logger.debug(f"Error building skill summary: {e}")
+            return "Skill library unavailable."
 
     def _init_modules(self):
         """Initialize all neural system modules."""
@@ -104,7 +131,7 @@ class EmbodiedBrainInterface:
         # Dedicated LLM client for code generation (can use a different model)
         try:
             import os
-            code_model = os.getenv("LLM_CODE_MODEL", os.getenv("LLM_MODEL", "qwen-plus"))
+            code_model = os.getenv("LLM_CODE_MODEL", os.getenv("LLM_MODEL", "qwen3.6-plus"))
             self.code_llm_client = LLMConfig.create_client(model=code_model)
         except Exception as e:
             logger.warning(f"Code LLM unavailable, will share main LLM: {e}")
@@ -282,9 +309,9 @@ class EmbodiedBrainInterface:
         try:
             self.console.print("[dim]🧠 Thinking...[/dim]")
             
-            # Update system prompt with current user info
-            if self.user and f"User name: {self.user.name}" not in self._system_prompt:
-                self._system_prompt += f"\nUser name: {self.user.name}"
+            # Update system prompt template with current user info
+            if self.user and f"User name: {self.user.name}" not in self._system_prompt_template:
+                self._system_prompt_template += f"\nUser name: {self.user.name}"
             
             # Add user message to chat history
             self._chat_messages.append(Message(role="user", content=user_input))
@@ -353,14 +380,20 @@ class EmbodiedBrainInterface:
         """Have a natural conversation with the user via LLM.
         
         This is the core "cerebral cortex" function - natural language
-        understanding and generation.
+        understanding and generation. The system prompt is rebuilt each
+        call with a fresh skill inventory.
         
         Args:
             user_input: The user's message (may or may not be in _chat_messages already)
         """
         try:
+            # Build system prompt with fresh skill inventory
+            system_prompt = self._system_prompt_template.format(
+                skill_summary=self._get_skill_summary()
+            )
+            
             # Build messages: system prompt + conversation history
-            messages = [Message(role="system", content=self._system_prompt)]
+            messages = [Message(role="system", content=system_prompt)]
             messages.extend(self._chat_messages)
             
             # Ensure the last message is from the user

@@ -26,7 +26,7 @@ wheels/
 .installed.cfg
 *.egg
 
-openerb/skills/*
+openerb/skills/
 # Testing
 .pytest_cache/
 .coverage

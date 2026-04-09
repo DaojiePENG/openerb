@@ -18,7 +18,7 @@ class APIConfig:
     """Configuration for external APIs."""
     dashscope_api_key: str = os.getenv("DASHSCOPE_API_KEY", "")
     dashscope_api_base: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    dashscope_model: str = "qwen-vl-plus"
+    dashscope_model: str = "qwen3.6-plus"
     
     # Fallback LLM config
     openai_api_key: Optional[str] = os.getenv("OPENAI_API_KEY")
