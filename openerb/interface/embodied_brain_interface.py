@@ -356,9 +356,10 @@ class EmbodiedBrainInterface:
                 ))
             else:
                 # Pure conversational response - display it
-                self.console.print(f"[cyan]{response}[/cyan]")
+                clean_response = response.replace("[CHAT]", "").strip()
+                self.console.print(f"[cyan]{clean_response}[/cyan]")
                 # Add assistant response to chat history
-                self._chat_messages.append(Message(role="assistant", content=response))
+                self._chat_messages.append(Message(role="assistant", content=clean_response))
             
             # Record interaction
             self.conversation_history.append({

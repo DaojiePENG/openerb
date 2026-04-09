@@ -19,7 +19,7 @@ from openerb.modules.visual_cortex import VisualCortex
 
 
 @pytest.mark.asyncio
-async def test_visual_to_communication_to_cerebellum_skill_sharing_flow():
+async def test_visual_to_communication_to_cerebellum_skill_sharing_flow(tmp_path):
     """End-to-end: Visual analysis produces a shareable skill; remote node receives and registers it."""
     visual = VisualCortex(robot_type=RobotType.G1)
 
@@ -33,8 +33,8 @@ async def test_visual_to_communication_to_cerebellum_skill_sharing_flow():
     assert result.annotation is not None
 
     # Cerebellum skill registration on source node
-    cereb_a = Cerebellum()
-    cereb_b = Cerebellum()
+    cereb_a = Cerebellum(storage_path=tmp_path / "cereb_a.json")
+    cereb_b = Cerebellum(storage_path=tmp_path / "cereb_b.json")
 
     skill = Skill(
         name="navigate_from_scene",
@@ -150,11 +150,11 @@ def test_communication_node_lifecycle_and_discovery_with_policy():
 
 
 @pytest.mark.asyncio
-async def test_integration_engine_end_to_end_execution_and_sharing():
+async def test_integration_engine_end_to_end_execution_and_sharing(tmp_path):
     """IntegrationEngine should generate a skill, save to cerebellum, record in hippocampus, and share via communication."""
     from openerb.modules.system_integration import IntegrationEngine
 
-    engine = IntegrationEngine()
+    engine = IntegrationEngine(cerebellum=Cerebellum(storage_path=tmp_path / "engine_skills.json"))
 
     # Add a peer node to communicate with
     peer = CommunicationNode(node_id="peer_1", robot_type=RobotType.GO2, address="10.2.2.2")

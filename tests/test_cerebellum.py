@@ -17,9 +17,9 @@ from openerb.modules.cerebellum import (
 # Test fixtures
 
 @pytest.fixture
-def cerebellum():
-    """Create a Cerebellum instance."""
-    return Cerebellum()
+def cerebellum(tmp_path):
+    """Create a Cerebellum instance with isolated storage."""
+    return Cerebellum(storage_path=tmp_path / "test_skill_library.json")
 
 
 @pytest.fixture
