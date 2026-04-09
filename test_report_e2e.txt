@@ -1,0 +1,78 @@
+======================================================================
+  OpenERB Embodied Brain — Comprehensive E2E Test Report
+  Date: 2026-04-10 07:51:45
+  Model: qwen3.6-plus
+  Duration: 1143.2s
+======================================================================
+
+  TOTAL: 23  |  PASSED: 21  |  FAILED: 2  |  RATE: 91.3%
+
+┌─ Marker Routing (9/9)
+│  ✅ marker_math_en: Expected=ACTION_REQUIRED, Got=ACTION_REQUIRED
+│  ✅ marker_math_cn: Expected=ACTION_REQUIRED, Got=ACTION_REQUIRED
+│  ✅ marker_math_bare: Expected=ACTION_REQUIRED, Got=ACTION_REQUIRED
+│  ✅ marker_fibonacci_en: Expected=ACTION_REQUIRED, Got=ACTION_REQUIRED
+│  ✅ marker_fibonacci_cn: Expected=ACTION_REQUIRED, Got=ACTION_REQUIRED
+│  ✅ marker_skills_en: Expected=LIST_SKILLS, Got=LIST_SKILLS
+│  ✅ marker_skills_cn: Expected=LIST_SKILLS, Got=LIST_SKILLS
+│  ✅ marker_chat_en: Expected=None, Got=None
+│  ✅ marker_chat_cn: Expected=None, Got=None
+└─
+
+┌─ Code Generation (1/2)
+│  ✅ codegen_calc_8plus8: OK
+│  ❌ codegen_fibonacci_10: MISSING_PATTERN: 'fibonacci'
+│     Code: import re
+
+def calculate_expression(expr: str) -> float:
+    """Evaluate a simple arithmetic expression containing two n
+└─
+
+┌─ Skill Persistence (2/2)
+│  ✅ persist_learn: Skills in library: 1, persisted_flag: True
+│  ✅ persist_survive_restart: Skills after restart: 1
+└─
+
+┌─ Skill Reuse (2/2)
+│  ✅ reuse_math: reused=True, executed=True
+│  ✅ reuse_math_different_op: reused=True
+└─
+
+┌─ Skill Listing (3/3)
+│  ✅ listing_list_en: table_shown=True, empty_msg=False
+│  ✅ listing_list_cn: table_shown=True, empty_msg=False
+│  ✅ listing_list_what: table_shown=True, empty_msg=False
+└─
+
+┌─ Multi-turn (0/1)
+│  ❌ multiturn_remember_name: LLM mentions '小明': False
+└─
+
+┌─ Bilingual (2/2)
+│  ✅ bilingual_cn_math: 
+│  ✅ bilingual_en_chat: 
+└─
+
+┌─ Edge Cases (2/2)
+│  ✅ edge_ellipsis: marker=None
+│  ✅ edge_large_calc: marker=ACTION_REQUIRED, executed=True
+└─
+
+──────────────────────────────────────────────────────────────────────
+  FAILURE DETAILS
+──────────────────────────────────────────────────────────────────────
+  ❌ codegen_fibonacci_10 (Code Generation)
+     Input: generate first 10 fibonacci numbers
+     Details: MISSING_PATTERN: 'fibonacci'
+     Console: [dim]🧠 Thinking...[/dim]
+[cyan]I'll generate the first 10 Fibonacci numbers for you right away.[/cyan]
+[yellow]🔧 Let me work on that...[/yellow]
+[dim]🆕 No existing skill found, generating new code...[
+
+  ❌ multiturn_remember_name (Multi-turn)
+     Input: 你还记得我叫什么吗？
+     Details: LLM mentions '小明': False
+
+======================================================================
+  END OF REPORT
+======================================================================

@@ -95,27 +95,49 @@ class MotorCortex:
         }
         
         try:
-            # 1. Generate code
-            generated = await self.code_generator.generate_code(
-                intent,
-                robot_context,
-                use_templates=prefer_template
-            )
+            # 1. Generate code (with retry on validation failure)
+            max_attempts = 3
+            generated = None
+            validation = None
             
-            if not generated.code:
-                result["error"] = generated.error_message or "Code generation failed"
-                return result
-            
-            result["generated_code"] = generated
-            logger.debug(f"Generated code ({generated.complexity}): {len(generated.code)} bytes")
-            
-            # 2. Validate code
-            validation = self.code_validator.validate(generated.code)
-            result["validation_result"] = validation
+            for attempt in range(max_attempts):
+                if attempt == 0:
+                    generated = await self.code_generator.generate_code(
+                        intent,
+                        robot_context,
+                        use_templates=prefer_template
+                    )
+                else:
+                    # Retry with LLM only, adding previous error as feedback
+                    logger.info(f"Retry {attempt}/{max_attempts}: regenerating code (previous error: {validation.details})")
+                    generated = await self.code_generator.regenerate_without_forbidden(
+                        intent, robot_context, validation.details
+                    )
+                
+                if not generated or not generated.code:
+                    result["error"] = (generated.error_message if generated else None) or "Code generation failed"
+                    return result
+                
+                result["generated_code"] = generated
+                logger.debug(f"Generated code ({generated.complexity}): {len(generated.code)} bytes")
+                
+                # 2. Validate code
+                validation = self.code_validator.validate(generated.code)
+                result["validation_result"] = validation
+                
+                if validation.valid:
+                    break
+                
+                logger.warning(f"Code failed validation (attempt {attempt + 1}): {validation.details}")
+                
+                # Only retry for forbidden-operation errors (fixable by LLM)
+                if "Forbidden" not in (validation.details or ""):
+                    result["error"] = validation.details
+                    return result
             
             if not validation.valid:
                 result["error"] = validation.details
-                logger.warning(f"Code failed validation: {validation.details}")
+                logger.warning(f"Code failed validation after {max_attempts} attempts: {validation.details}")
                 return result
             
             logger.info("Code passed validation")

@@ -507,6 +507,26 @@ class EmbodiedBrainInterface:
                     parameters={"task": user_input},
                     confidence=0.6
                 )
+            else:
+                # Override with more specific derived name when applicable
+                # e.g., PrefrontalCortex may say "calculate" for fibonacci
+                derived_name = self._derive_skill_name(user_input)
+                if derived_name != "math_calculation" and intent.action in ("calculate", "compute", "general_task"):
+                    logger.info(f"Overriding intent action '{intent.action}' → '{derived_name}'")
+                    intent = Intent(
+                        raw_text=user_input,
+                        action=derived_name,
+                        parameters=intent.parameters,
+                        confidence=intent.confidence,
+                    )
+                elif intent.raw_text != user_input:
+                    # PrefrontalCortex sets raw_text=action, fix to original user input
+                    intent = Intent(
+                        raw_text=user_input,
+                        action=intent.action,
+                        parameters=intent.parameters,
+                        confidence=intent.confidence,
+                    )
             
             # 2. Check Cerebellum for existing skill
             existing_skill = await self._find_existing_skill(intent)

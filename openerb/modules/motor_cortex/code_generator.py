@@ -238,6 +238,74 @@ IMPORTANT:
             logger.error(f"LLM generation failed: {e}")
             return None
     
+    async def regenerate_without_forbidden(
+        self,
+        intent: Intent,
+        robot_context: Optional[RobotContext],
+        validation_error: str
+    ) -> Optional[GeneratedCode]:
+        """Regenerate code after a validation failure, with explicit error feedback.
+        
+        This is called when the first generation used a forbidden operation
+        (e.g., eval, exec). The LLM is told exactly what went wrong.
+        """
+        if not self.llm_client:
+            return None
+        
+        logger.info(f"Regenerating code with error feedback: {validation_error}")
+        
+        prompt = f"""User request: "{intent.raw_text}"
+Action type: {intent.action}
+Parameters: {intent.parameters}
+
+⚠️ PREVIOUS CODE WAS REJECTED because: {validation_error}
+
+You MUST NOT use eval(), exec(), compile(), __import__(), open(), or input().
+For math, use explicit operators (+, -, *, /, **) or the math module.
+For string-based expressions, parse them manually using regex (re module).
+
+Generate a CORRECTED version that avoids the forbidden operation entirely.
+The code MUST:
+1. Define a REUSABLE function with clear parameters
+2. Call the function with the user's specific values
+3. Use print() to clearly show the result
+4. Be self-contained and executable as-is
+5. Only use standard library imports (math, re, json, datetime, collections, random, string)"""
+
+        try:
+            response = await self.llm_client.call(
+                messages=[
+                    Message(role="system", content=self.SYSTEM_PROMPT),
+                    Message(role="user", content=prompt),
+                ],
+                temperature=0.2,  # Lower temperature for more deterministic output
+                max_tokens=2048
+            )
+            
+            code = self._extract_code_from_response(response.content)
+            
+            if not code:
+                logger.warning("Could not extract code from retry LLM response")
+                return None
+            
+            generated = GeneratedCode(
+                code=code,
+                skill_id=f"skill_{intent.timestamp.timestamp()}_retry",
+                intent=intent,
+                llm_used=True,
+                success_rate_prediction=0.7,
+                complexity="medium"
+            )
+            
+            self.generation_history[generated.skill_id] = generated
+            logger.info("Regenerated code with error feedback")
+            
+            return generated
+        
+        except Exception as e:
+            logger.error(f"LLM retry generation failed: {e}")
+            return None
+
     async def _fallback_generation(
         self,
         intent: Intent,

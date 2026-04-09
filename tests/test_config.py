@@ -18,7 +18,7 @@ class TestAPIConfig:
         config = APIConfig()
         assert config.dashscope_api_base is not None
         assert "dashscope" in config.dashscope_api_base.lower()
-        assert config.dashscope_model == "qwen-vl-plus"
+        assert config.dashscope_model == "qwen3.6-plus"
     
     def test_api_config_custom(self):
         """Test APIConfig with custom values."""
