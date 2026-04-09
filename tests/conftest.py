@@ -15,6 +15,7 @@ from openerb.core import (
     set_config, set_storage, Storage,
     Skill, SkillStatus, SkillType, RobotProfile, RobotType, UserProfile
 )
+from openerb.interface.embodied_brain_interface import EmbodiedBrainInterface
 
 
 @pytest.fixture
@@ -86,3 +87,27 @@ def test_user_profile():
         face_embedding=[0.1] * 128,
         preferences={"preferred_speed": "normal"}
     )
+
+
+@pytest.fixture
+def embodied_brain_interface():
+    """Create an embodied brain interface instance for testing."""
+    interface = EmbodiedBrainInterface(robot_body=RobotType.G1)
+    yield interface
+    # Cleanup if needed
+    if interface and hasattr(interface, 'user_id'):
+        pass  # Cleanup logic here if needed
+
+
+@pytest.fixture
+def test_user_id():
+    """Generate a test user ID."""
+    import uuid
+    return f"test_user_{uuid.uuid4().hex[:8]}"
+
+
+@pytest.fixture
+def test_user_name():
+    """Generate a test user name."""
+    import uuid
+    return f"TestUser_{uuid.uuid4().hex[:4]}"

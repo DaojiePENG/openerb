@@ -969,6 +969,285 @@ openerb/
 
 ---
 
+## Phase 5.1: 完整具身大脑集成 (✅ 已完成 2026.04.03)
+
+### EmbodiedBrainInterface - 真正的自学习系统
+
+> 这不是又一个演示性的聊天界面。这是所有7个神经模块的**完整集成**，实现了真实的学习循环。
+
+### 核心特性
+
+#### 1. 真实学习循环
+
+```
+用户："teach me how to calculate the sum of two numbers"
+  ↓
+[PrefrontalCortex] 理解意图
+  ↓
+[Cerebellum] 查询技能库
+  → 结果：不存在这个技能
+  ↓
+[MotorCortex] 生成代码
+  → 生成：Python函数计算两数之和
+  ↓
+[LimbicSystem] 安全评估
+  → 结果：安全，无需用户确认
+  ↓
+[执行] 运行生成的代码
+  → 结果：成功
+  ↓
+[Hippocampus] 记录学习
+  → 保存：这个技能已学
+  ↓
+[Cerebellum] 注册技能
+  → 下次请求同样任务时可直接使用
+  ↓
+用户："calculate 5 + 7"
+  → 系统直接使用已学技能
+  → 结果：12
+```
+
+#### 2. 身体识别与无缝迁移
+
+```python
+# 在G1上启动
+brain_g1 = EmbodiedBrainInterface(robot_body=RobotType.G1)
+
+# InsularCortex自动识别G1的能力
+[身体识别]：我是G1
+  - 26个DOF
+  - 有夹爪
+  - 有摄像头
+  - 最大速度：2.0 m/s
+
+# 用户教系统学习G1特定技能
+User: "learn how to use G1's gripper"
+  → 系统学习G1夹爪控制
+
+# 迁移到Go2（只需改一行代码！）
+brain_go2 = EmbodiedBrainInterface(robot_body=RobotType.GO2)
+
+# InsularCortex自动识别Go2的能力
+[身体识别]：我是Go2
+  - 不同的运动学
+  - 无夹爪 ← 关键区别
+  - 有摄像头
+  - 最大速度：1.5 m/s
+
+# 仅此而已。openerb核心代码0改动。
+# 系统自动知道Go2没有夹爪，不会尝试使用那些技能
+# 用户可以教系统学习Go2的新技能（轮腿控制等）
+```
+
+#### 3. 所有7个模块的协调
+
+```python
+class EmbodiedBrainInterface:
+    def __init__(self, robot_body: RobotType):
+        # 1. 初始化所有7个神经模块（部分模块失败也继续）
+        self.prefrontal_cortex = PrefrontalCortex(...)
+        self.motor_cortex = MotorCortex(robot_type=robot_body)
+        self.cerebellum = Cerebellum()
+        self.hippocampus = Hippocampus()
+        self.limbic_system = LimbicSystem()
+        self.insular_cortex = InsularCortex()
+        self.visual_cortex = VisualCortex()
+        
+        # 2. 告诉大脑它的身体
+        self.insular_cortex.identify_robot(robot_body.value)
+        
+        # 3. 准备好学习循环
+        self.robot_body = robot_body
+
+    async def _process_request(self, user_input: str):
+        # 完整的学习循环
+        
+        # 1️⃣ 理解
+        intent = await self._understand_intent(user_input)
+        
+        # 2️⃣ 检索
+        existing_skill = await self._find_existing_skill(intent)
+        
+        if existing_skill:
+            # 3️⃣ 执行已有技能
+            await self._execute_existing_skill(existing_skill)
+        else:
+            # 3️⃣ 学习新技能
+            await self._learn_and_execute(intent, user_input)
+
+    async def _learn_and_execute(self, intent: Intent, user_input: str):
+        # 生成代码
+        code = await self.motor_cortex.generate_code(intent)
+        
+        # 安全检查
+        safety_result = self.limbic_system.evaluate_action(...)
+        
+        # 执行
+        result = self.motor_cortex.execute_code(code)
+        
+        # 持久化
+        await self._persist_new_skill(intent, code, user_input)
+```
+
+#### 4. 优雅的降级机制
+
+即使某些模块不可用，系统仍然工作：
+
+```python
+try:
+    self.prefrontal_cortex = PrefrontalCortex(llm_client=client)
+except Exception:
+    logger.warning("PrefrontalCortex unavailable, will use fallback")
+    self.prefrontal_cortex = None
+
+# 使用时
+async def _understand_intent(self, user_input):
+    if self.prefrontal_cortex:
+        # 使用LLM进行真实NLU
+        result = await self.prefrontal_cortex.process_input(user_input)
+    else:
+        # Fallback：关键字匹配
+        result = self._fallback_intent_parsing(user_input)
+    
+    return result
+```
+
+### 内置命令系统
+
+| 命令 | 说明 | 示例 |
+|------|------|------|
+| `learn how to ...` | 学习新技能 | `learn how to calculate sum` |
+| `execute [skill]` | 执行已有技能 | `execute calculate_sum` |
+| `what skills do you have?` | 列出技能库 | - |
+| `what body are you?` | 显示机器人识别 | - |
+| `history` | 对话历史 | - |
+| `stats` | 学习统计 | - |
+| `help` | 帮助 | - |
+| `quit` | 退出 | - |
+
+### 使用示例
+
+#### 启动系统
+```bash
+# 启动聊天接口
+python scripts/chat.py
+
+# 或在代码中
+from openerb.interface import EmbodiedBrainInterface
+from openerb.core.types import RobotType
+import asyncio
+
+brain = EmbodiedBrainInterface(robot_body=RobotType.G1)
+await brain.start()
+```
+
+#### 典型交互
+
+```
+🧠 OpenERB Embodied Robot Brain
+Complete Neural System Integration
+
+👤 Who am I talking with?
+Your name: Alice
+
+✓ Hello Alice! I'm ready to learn and evolve.
+
+🤖 I am now: G1
+My current capabilities:
+  • locomotion: walk, trot, jump
+  • manipulation: gripper, 7 DOF arm
+  • sensing: camera, lidar
+
+You: learn how to count to ten
+
+🧠 Understanding your request...
+📚 Checking my skill library...
+🔧 This is new. Let me develop a solution...
+📝 Generated solution code
+✓ Learned and saved!
+
+You: count to ten
+
+🧠 Understanding your request...
+📚 Checking my skill library...
+✓ I know how to do this!
+Executing skill: skill_learn_count_1712129900.1
+
+✓ Execution Result
+  1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+
+You: what body are you?
+
+🤖 I am now: G1
+My current capabilities:
+  • locomotion: walk, trot, jump
+  • manipulation: gripper (7 DOF arm)
+  • sensing: camera (2K, 30 FPS), lidar
+  • This means: I understand my physical constraints and will ask for help if a task exceeds my capabilities
+```
+
+### 与旧ChatInterface的对比
+
+| 特性 | 旧版本 | 新版本 |
+|------|--------|--------|
+| 技能 | 6个硬编码 | ∞（动态学习） |
+| 代码生成 | ❌ | ✅ MotorCortex |
+| 学习记忆 | ❌ | ✅ Hippocampus |
+| 身体识别 | ❌ | ✅ InsularCortex |
+| 安全约束 | ❌ | ✅ LimbicSystem |
+| 机器人迁移 | ❌ 需重构 | ✅ 自适应 |
+| 模块集成 | ❌ 隔离 | ✅ 完整协作 |
+
+### 关键设计决策
+
+**Q: 为什么迁移到新机器人不需要修改openerb核心代码？**
+
+A: 通过"身体参数化"（Body Parameterization）
+```python
+# 不是这样（紧耦合）：
+if robot_type == "G1":
+    code = generate_g1_code(...)
+elif robot_type == "Go2":
+    code = generate_go2_code(...)
+
+# 而是这样（松耦合）：
+profile = insular_cortex.get_robot_profile()  # 动态获取能力
+code = generate_code_for_profile(intent, profile)  # 使用能力生成
+```
+
+**Q: 为什么技能能自动迁移？**
+
+A: 技能分类
+```python
+# UNIVERSAL：所有机器人都能做（如数学计算）
+# BODY_SPECIFIC：特定机器人（如G1夹爪控制）
+# HYBRID：通用逻辑+特定优化（如移动）
+
+# 迁移时：
+# - UNIVERSAL → 直接复用
+# - BODY_SPECIFIC → 检测兼容性，可能需重新学习
+# - HYBRID → 自动适配新机器人参数
+```
+
+**Q: 为什么不是每个模块初始化都被try-except包围？**
+
+A: 因为openerb提供"优雅降级"特性
+```python
+# 某个模块失败：
+# ✅ 系统继续运行，使用fallback或替代方案
+# ❌ 不是整个系统崩溃
+
+try:
+    self.llm_client = LLMConfig.create_client()
+except:
+    self.llm_client = None
+    # 使用fallback：关键字匹配而不是真实NLU
+
+# 结果：系统可用，只是功能受限
+```
+
+---
+
 ## 技术栈
 
 | 组件 | 技术选择 |
@@ -980,6 +1259,7 @@ openerb/
 | 进程通信 | RPC / gRPC (可选) |
 | 日志 | Python logging |
 | 测试 | pytest |
+| CLI框架 | Rich (美观的终端UI) |
 
 ---
 
