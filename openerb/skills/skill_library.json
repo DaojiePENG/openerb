@@ -1,1 +1,66 @@
-{}
+{
+  "461e0392-bc0": {
+    "id": "461e0392-bc0",
+    "name": "calculate",
+    "description": "calculate 1+1",
+    "code": "def calculate_expression(expr: str) -> float:\n    \"\"\"\n    Evaluate a simple arithmetic expression and return the result.\n    \n    Parameters:\n        expr (str): A string representing a mathematical expression (e.g., '1+1', '2*3-4')\n        \n    Returns:\n        float: The result of the evaluated expression\n        \n    Raises:\n        ValueError: If the expression is invalid or cannot be parsed\n    \"\"\"\n    try:\n        # Parse the expression using basic operators\n        # This is a simplified parser for demonstration purposes\n        # In a real system, you'd want to use a proper parser like `ast`\n        if '+' in expr:\n            parts = expr.split('+')\n            if len(parts) == 2:\n                return float(parts[0]) + float(parts[1])\n        elif '-' in expr:\n            parts = expr.split('-')\n            if len(parts) == 2:\n                return float(parts[0]) - float(parts[1])\n        elif '*' in expr:\n            parts = expr.split('*')\n            if len(parts) == 2:\n                return float(parts[0]) * float(parts[1])\n        elif '/' in expr:\n            parts = expr.split('/')\n            if len(parts) == 2:\n                numerator = float(parts[0])\n                denominator = float(parts[1])\n                if denominator == 0:\n                    raise ValueError(\"Division by zero\")\n                return numerator / denominator\n        elif '**' in expr or '^' in expr:\n            parts = expr.split('**') if '**' in expr else expr.split('^')\n            if len(parts) == 2:\n                return float(parts[0]) ** float(parts[1])\n        \n        raise ValueError(f\"Unsupported operation in expression: {expr}\")\n    \n    except ValueError as e:\n        raise ValueError(f\"Invalid expression: {expr}. Error: {str(e)}\")\n\n# User requested: calculate 1+1\nresult = calculate_expression('1+1')\nprint(f\"1 + 1 = {result}\")",
+    "skill_type": "body_specific",
+    "dependencies": [],
+    "tags": [
+      "auto_generated",
+      "learned"
+    ],
+    "supported_robots": [
+      "G1"
+    ],
+    "status": "draft",
+    "metadata": {
+      "created_at": "2026-04-10T12:06:14.205070",
+      "robot_type": "G1",
+      "description": "Learned from: calculate 1+1",
+      "tags": [
+        "auto_generated",
+        "learned",
+        "calculate"
+      ],
+      "execution_count": 3,
+      "success_count": 3,
+      "creation_source": "manual_registration",
+      "last_used": "2026-04-10T12:08:52.391981",
+      "last_updated": "2026-04-10T12:08:52.391993",
+      "update_source": "execution_update"
+    }
+  },
+  "8ee1c004-4c4": {
+    "id": "8ee1c004-4c4",
+    "name": "fibonacci",
+    "description": "print fibonacci sequence",
+    "code": "def fibonacci(n: int) -> list:\n    \"\"\"\n    Generate the first n numbers of the Fibonacci sequence.\n    \n    Parameters:\n    - n (int): The number of Fibonacci numbers to generate.\n    \n    Returns:\n    - list: A list containing the first n Fibonacci numbers.\n    \n    Raises:\n    - ValueError: If n is less than or equal to 0.\n    \"\"\"\n    if n <= 0:\n        raise ValueError(\"Number of Fibonacci numbers must be greater than 0\")\n    \n    sequence = []\n    a, b = 0, 1\n    for _ in range(n):\n        sequence.append(a)\n        a, b = b, a + b\n    \n    return sequence\n\n# User requested: print Fibonacci sequence\n# We'll generate the first 10 Fibonacci numbers as an example\nresult = fibonacci(10)\nprint(f\"First 10 Fibonacci numbers: {result}\")",
+    "skill_type": "body_specific",
+    "dependencies": [],
+    "tags": [
+      "auto_generated",
+      "learned"
+    ],
+    "supported_robots": [
+      "G1"
+    ],
+    "status": "draft",
+    "metadata": {
+      "created_at": "2026-04-10T12:11:12.091372",
+      "robot_type": "G1",
+      "description": "Learned from: print fibonacci sequence",
+      "tags": [
+        "auto_generated",
+        "learned",
+        "fibonacci"
+      ],
+      "execution_count": 2,
+      "success_count": 2,
+      "creation_source": "manual_registration",
+      "last_used": "2026-04-10T12:12:24.927519",
+      "last_updated": "2026-04-10T12:12:24.927533",
+      "update_source": "execution_update"
+    }
+  }
+}

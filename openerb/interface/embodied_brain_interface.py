@@ -327,9 +327,9 @@ class EmbodiedBrainInterface:
             marker = self._extract_marker(response)
             
             if marker in ("ACTION_REQUIRED", "CODE_REQUIRED"):
-                clean_response = response.replace("[ACTION_REQUIRED]", "").replace("[CODE_REQUIRED]", "").replace("[CHAT]", "").strip()
-                if clean_response:
-                    self.console.print(f"[cyan]{clean_response}[/cyan]")
+                # Don't print LLM acknowledgment here — _handle_action_request
+                # will print the final interpreted result to avoid double response
+                self.console.print("[yellow]🔧 Let me work on that...[/yellow]")
                 await self._handle_action_request(user_input)
             elif marker == "LIST_SKILLS":
                 clean_response = response.replace("[LIST_SKILLS]", "").replace("[CHAT]", "").strip()
@@ -797,13 +797,30 @@ Based on the execution result, give a brief, natural response to the user's ques
             return
         
         try:
-            metadata = skill_data.get('metadata', {})
-            metadata['execution_count'] = metadata.get('execution_count', 0) + 1
+            # Read current counts from the stored skill (not the passed-in copy)
+            full_skill = self.cerebellum.get_skill(skill_id) or skill_data
+            metadata = full_skill.get('metadata', {})
+            
+            # Update counts in metadata
+            exec_count = metadata.get('execution_count', 0) + 1
+            success_count = metadata.get('success_count', 0)
             if result.get('success'):
-                metadata['success_count'] = metadata.get('success_count', 0) + 1
+                success_count += 1
+            metadata['execution_count'] = exec_count
+            metadata['success_count'] = success_count
             metadata['last_used'] = datetime.now().isoformat()
-            self.cerebellum.library.update_skill(skill_id, {'metadata': metadata}, 'execution_update')
-            logger.debug(f"Updated execution stats for skill {skill_id}")
+            
+            # Write to BOTH top-level and metadata so list_skills can find it
+            self.cerebellum.library.update_skill(
+                skill_id,
+                {
+                    'execution_count': exec_count,
+                    'success_count': success_count,
+                    'metadata': metadata,
+                },
+                'execution_update'
+            )
+            logger.debug(f"Updated execution stats for skill {skill_id}: runs={exec_count}")
         except Exception as e:
             logger.warning(f"Failed to update skill stats: {e}")
 
@@ -834,13 +851,19 @@ Based on the execution result, give a brief, natural response to the user's ques
                     name = skill.get('name', 'Unknown')
                     desc = skill.get('description', '')[:40]
                     skill_type = skill.get('skill_type', 'N/A')
-                    exec_count = skill.get('execution_count', 0)
-                    success_rate = skill.get('success_rate', 0.0)
                     # Determine source from full skill data
                     full_data = self.cerebellum.get_skill(skill.get('id', ''))
                     metadata = full_data.get('metadata', {}) if full_data else {}
                     tags = full_data.get('tags', []) if full_data else []
                     source = "🤖 learned" if "auto_generated" in tags else "📋 preset"
+                    # Read execution count from top-level first, then metadata fallback
+                    exec_count = skill.get('execution_count', 0)
+                    if exec_count == 0 and metadata:
+                        exec_count = metadata.get('execution_count', 0)
+                    success_count = full_data.get('success_count', 0) if full_data else 0
+                    if success_count == 0 and metadata:
+                        success_count = metadata.get('success_count', 0)
+                    success_rate = success_count / exec_count if exec_count > 0 else 0.0
                 else:
                     name = getattr(skill, 'name', str(skill))
                     desc = getattr(skill, 'description', '')[:40]
