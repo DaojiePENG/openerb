@@ -1,11 +1,11 @@
 ======================================================================
   OpenERB Embodied Brain — Comprehensive E2E Test Report
-  Date: 2026-04-10 07:51:45
+  Date: 2026-04-10 08:09:25
   Model: qwen3.6-plus
-  Duration: 1143.2s
+  Duration: 842.6s
 ======================================================================
 
-  TOTAL: 23  |  PASSED: 21  |  FAILED: 2  |  RATE: 91.3%
+  TOTAL: 23  |  PASSED: 22  |  FAILED: 1  |  RATE: 95.7%
 
 ┌─ Marker Routing (9/9)
 │  ✅ marker_math_en: Expected=ACTION_REQUIRED, Got=ACTION_REQUIRED
@@ -19,13 +19,9 @@
 │  ✅ marker_chat_cn: Expected=None, Got=None
 └─
 
-┌─ Code Generation (1/2)
+┌─ Code Generation (2/2)
 │  ✅ codegen_calc_8plus8: OK
-│  ❌ codegen_fibonacci_10: MISSING_PATTERN: 'fibonacci'
-│     Code: import re
-
-def calculate_expression(expr: str) -> float:
-    """Evaluate a simple arithmetic expression containing two n
+│  ✅ codegen_fibonacci_10: OK
 └─
 
 ┌─ Skill Persistence (2/2)
@@ -46,6 +42,8 @@ def calculate_expression(expr: str) -> float:
 
 ┌─ Multi-turn (0/1)
 │  ❌ multiturn_remember_name: LLM mentions '小明': False
+│     LLM: [USER_PROFILE]
+Checking user profile to confirm your name.
 └─
 
 ┌─ Bilingual (2/2)
@@ -61,17 +59,11 @@ def calculate_expression(expr: str) -> float:
 ──────────────────────────────────────────────────────────────────────
   FAILURE DETAILS
 ──────────────────────────────────────────────────────────────────────
-  ❌ codegen_fibonacci_10 (Code Generation)
-     Input: generate first 10 fibonacci numbers
-     Details: MISSING_PATTERN: 'fibonacci'
-     Console: [dim]🧠 Thinking...[/dim]
-[cyan]I'll generate the first 10 Fibonacci numbers for you right away.[/cyan]
-[yellow]🔧 Let me work on that...[/yellow]
-[dim]🆕 No existing skill found, generating new code...[
-
   ❌ multiturn_remember_name (Multi-turn)
      Input: 你还记得我叫什么吗？
      Details: LLM mentions '小明': False
+     LLM response: [USER_PROFILE]
+Checking user profile to confirm your name.
 
 ======================================================================
   END OF REPORT

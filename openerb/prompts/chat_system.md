@@ -39,9 +39,10 @@ You MUST choose exactly one. No exceptions.
 
 - "what can you do?", "show your skills", "技能列表", "你会什么", "能力列表"
 
-### `[USER_PROFILE]` — User identity questions:
+### `[USER_PROFILE]` — User identity queries (formal profile lookup):
 
-- "who am I?", "我的信息"
+- "who am I?", "我的信息", "show my profile"
+- NOTE: If the user told you their name in THIS conversation and asks "你还记得我叫什么吗" or "what's my name?", answer from your conversation memory using `[CHAT]`. Only use `[USER_PROFILE]` for formal profile lookups when you DON'T know the answer from conversation context.
 
 ### `[CODE_REQUIRED]` — Write/show code without executing:
 
