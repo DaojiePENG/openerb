@@ -584,6 +584,131 @@ class BrainTestHarness:
         status = "✅" if passed2 else "❌"
         print(f"  {status} large_calc: marker={res2['marker']} [{dt2:.1f}s]")
 
+    async def test_learning_cycle(self):
+        """Category 9: Brain-like learning cycle — learn, reuse with new params, track progress."""
+        print("\n" + "=" * 60)
+        print("📋 CATEGORY 9: Learning Cycle (Brain-like)")
+        print("=" * 60)
+
+        # Clean start
+        self._reset_skill_library()
+        self._create_interface()
+
+        # 9a: Learn a skill from scratch
+        t0 = time.time()
+        res_learn = await self._send_message("calculate factorial of 5")
+        dt = time.time() - t0
+
+        learned = res_learn["skill_persisted"]
+        executed = res_learn["execution_success"]
+
+        result_learn = TestResult(
+            name="learn_factorial",
+            category="Learning Cycle",
+            input_text="calculate factorial of 5",
+            passed=learned and executed,
+            details=f"learned={learned}, executed={executed}",
+            duration=dt,
+            skill_persisted=learned,
+        )
+        self.suite.results.append(result_learn)
+        status = "✅" if result_learn.passed else "❌"
+        print(f"  {status} learn_factorial: learned={learned}, executed={executed} [{dt:.1f}s]")
+
+        # 9b: Reuse the skill with different parameters (re-parameterization)
+        t0 = time.time()
+        res_reuse = await self._send_message("calculate factorial of 10")
+        dt = time.time() - t0
+
+        reused = res_reuse["skill_reused"]
+        reuse_executed = res_reuse["execution_success"]
+        console = res_reuse["console_output"]
+        adapted = "Adapted" in console or "adapted" in console
+
+        result_reuse = TestResult(
+            name="reuse_factorial_new_params",
+            category="Learning Cycle",
+            input_text="calculate factorial of 10",
+            passed=reused and reuse_executed,
+            details=f"reused={reused}, executed={reuse_executed}, adapted={adapted}",
+            duration=dt,
+            skill_reused=reused,
+            execution_output=console[:300],
+        )
+        self.suite.results.append(result_reuse)
+        status = "✅" if result_reuse.passed else "❌"
+        print(f"  {status} reuse_factorial_new_params: reused={reused}, executed={reuse_executed}, adapted={adapted} [{dt:.1f}s]")
+
+        # 9c: Skill execution stats accumulate
+        skills = self._get_skill_library_contents()
+        exec_count = 0
+        for sk in skills.values():
+            if "factorial" in sk.get("name", "").lower() or "factorial" in sk.get("description", "").lower():
+                ec = sk.get("execution_count", 0)
+                md = sk.get("metadata", {})
+                exec_count = max(ec, md.get("execution_count", 0))
+                break
+
+        stats_ok = exec_count >= 2  # at least learn + reuse
+
+        result_stats = TestResult(
+            name="skill_stats_accumulate",
+            category="Learning Cycle",
+            input_text="(check execution count)",
+            passed=stats_ok,
+            details=f"execution_count={exec_count} (expected ≥ 2)",
+            duration=0,
+        )
+        self.suite.results.append(result_stats)
+        status = "✅" if stats_ok else "❌"
+        print(f"  {status} skill_stats_accumulate: exec_count={exec_count}")
+
+        # 9d: Hippocampus records learning
+        hippo_ok = False
+        try:
+            if self.interface.hippocampus and self.interface.user_id:
+                profile = self.interface.hippocampus.get_user_profile(self.interface.user_id)
+                if profile and profile.skill_progress:
+                    hippo_ok = len(profile.skill_progress) > 0
+        except Exception:
+            pass
+
+        result_hippo = TestResult(
+            name="hippocampus_tracks_learning",
+            category="Learning Cycle",
+            input_text="(check hippocampus)",
+            passed=hippo_ok,
+            details=f"has_progress_entries={hippo_ok}",
+            duration=0,
+        )
+        self.suite.results.append(result_hippo)
+        status = "✅" if hippo_ok else "❌"
+        print(f"  {status} hippocampus_tracks_learning: has_entries={hippo_ok}")
+
+        # 9e: Learning progress marker routing
+        t0 = time.time()
+        res_progress = await self._send_message("学习进度")
+        dt = time.time() - t0
+
+        progress_marker = res_progress["marker"]
+        progress_console = res_progress["console_output"]
+        has_report = "Learning Progress" in progress_console or "Mastery" in progress_console.lower() or "📊" in progress_console
+
+        result_progress = TestResult(
+            name="learning_progress_report",
+            category="Learning Cycle",
+            input_text="学习进度",
+            passed=progress_marker == "LEARNING_PROGRESS" or has_report,
+            details=f"marker={progress_marker}, has_report={has_report}",
+            duration=dt,
+            marker_expected="LEARNING_PROGRESS",
+            marker_actual=progress_marker,
+            execution_output=progress_console[:300],
+        )
+        self.suite.results.append(result_progress)
+        status = "✅" if result_progress.passed else "❌"
+        print(f"  {status} learning_progress_report: marker={progress_marker}, report_shown={has_report} [{dt:.1f}s]")
+
     # ═══════════════════════════════════════════════════════════
     # Report Generation
     # ═══════════════════════════════════════════════════════════
@@ -686,6 +811,9 @@ class BrainTestHarness:
 
         # Phase 8: Edge cases
         await self.test_edge_cases()
+
+        # Phase 9: Learning cycle (brain-like learning)
+        await self.test_learning_cycle()
 
         self.suite.end_time = time.time()
 

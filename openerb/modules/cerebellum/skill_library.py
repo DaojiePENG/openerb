@@ -136,13 +136,18 @@ class SkillLibrary:
         """
         results = []
 
+        # Meta-tags that should not participate in query matching
+        _META_TAGS = {"auto_generated", "learned", "motor_cortex", "low", "medium", "high", "body_specific", "universal"}
+
         for skill_id, skill_data in self.skills.items():
-            # Check query match (name, description, tags)
+            # Check query match (name, description, semantic tags only)
             query_lower = query.lower()
             name_match = query_lower in skill_data.get("name", "").lower()
             desc_match = query_lower in skill_data.get("description", "").lower()
             tags_list = skill_data.get("tags", [])
-            tags_match = any(query_lower in tag.lower() for tag in tags_list)
+            # Only match against semantic tags, not meta-tags like "learned"/"auto_generated"
+            semantic_tags = [t for t in tags_list if t.lower() not in _META_TAGS]
+            tags_match = any(query_lower in tag.lower() for tag in semantic_tags)
 
             if not (name_match or desc_match or tags_match):
                 continue

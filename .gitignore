@@ -27,6 +27,7 @@ wheels/
 *.egg
 
 openerb/skills/
+openerb/data/
 # Testing
 .pytest_cache/
 .coverage
@@ -46,6 +47,7 @@ htmlcov/
 data/
 generated_code/
 logs/
+output/
 *.db
 *.sqlite3
 

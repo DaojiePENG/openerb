@@ -282,7 +282,8 @@ class CodeExecutionPolicy:
     timeout: float = 60.0  # seconds
     max_memory: Optional[int] = None  # MB
     allowed_imports: List[str] = field(default_factory=lambda: [
-        "math", "random", "time", "collections", "itertools"
+        "math", "random", "time", "collections", "itertools",
+        "matplotlib", "numpy", "pathlib",
     ])
     forbidden_modules: List[str] = field(default_factory=lambda: [
         "os", "sys", "subprocess", "socket", "threading", "multiprocessing"

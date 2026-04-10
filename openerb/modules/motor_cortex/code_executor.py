@@ -57,6 +57,13 @@ class CodeExecutor:
         if locals_dict is None:
             locals_dict = {}
         
+        # Merge locals into globals so that exec() puts top-level names
+        # (imports, function defs) into one shared namespace.  Otherwise
+        # functions can't see imports when globals != locals.
+        exec_globals = {**globals_dict, **locals_dict}
+        if '__builtins__' not in exec_globals:
+            exec_globals['__builtins__'] = __builtins__
+        
         # Start timing
         start_time = time.time()
         
@@ -68,18 +75,18 @@ class CodeExecutor:
             # Use timeout mechanism
             if self.policy.sandbox_type == SandboxType.PROCESS:
                 result = self._execute_with_timeout(
-                    code, globals_dict, locals_dict,
+                    code, exec_globals, exec_globals,
                     stdout_capture, stderr_capture
                 )
             elif self.policy.sandbox_type == SandboxType.RESTRICTED_PYTHON:
                 result = self._execute_restricted(
-                    code, globals_dict, locals_dict,
+                    code, exec_globals, exec_globals,
                     stdout_capture, stderr_capture
                 )
             else:
                 # Direct execution for development
                 result = self._execute_direct(
-                    code, globals_dict, locals_dict,
+                    code, exec_globals, exec_globals,
                     stdout_capture, stderr_capture
                 )
             
@@ -142,21 +149,37 @@ class CodeExecutor:
             # In real implementation, would use RestrictedPython
             # For now, use direct execution with guards
             
-            # Check for forbidden operations
-            forbidden_patterns = [
-                "import os", "import sys", "import subprocess",
-                "exec(", "eval(", "compile(", "__import__(",
-                "open(", "input(", "exit(", "quit("
+            # Check for forbidden operations via regex for accuracy
+            import re
+            forbidden_checks = [
+                (r'\bimport\s+os\b', "import os"),
+                (r'\bimport\s+sys\b', "import sys"),
+                (r'\bimport\s+subprocess\b', "import subprocess"),
+                (r'\bfrom\s+os\b', "from os ..."),
+                (r'\bfrom\s+sys\b', "from sys ..."),
+                (r'\bfrom\s+subprocess\b', "from subprocess ..."),
+                (r'\bexec\s*\(', "exec()"),
+                (r'\beval\s*\(', "eval()"),
+                (r'\bcompile\s*\(', "compile()"),
+                (r'\b__import__\s*\(', "__import__()"),
+                (r'(?<!\w)open\s*\(', "open()"),
+                (r'\binput\s*\(', "input()"),
             ]
             
-            code_lower = code.lower()
-            for pattern in forbidden_patterns:
-                if pattern in code_lower:
+            for pattern, label in forbidden_checks:
+                if re.search(pattern, code):
                     return ExecutionResult(
                         success=False,
                         output="",
-                        error=f"Forbidden operation detected: {pattern}"
+                        error=f"Forbidden operation detected: {label}"
                     )
+            
+            # Set matplotlib to non-interactive backend before execution
+            try:
+                import matplotlib
+                matplotlib.use('Agg')
+            except ImportError:
+                pass
             
             # Safe execution
             with redirect_stdout(stdout_capture), redirect_stderr(stderr_capture):

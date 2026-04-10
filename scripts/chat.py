@@ -54,7 +54,7 @@ async def main():
     try:
         await start_embodied_brain(robot_body=RobotType.G1)
     except KeyboardInterrupt:
-        pass
+        pass  # start() handles summary & goodbye internally
 
 
 if __name__ == "__main__":
